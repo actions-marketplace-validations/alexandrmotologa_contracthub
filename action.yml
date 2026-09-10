@@ -18,6 +18,10 @@ inputs:
     required: false
     default: 'FULL'
 
+branding:
+  icon: 'shield'
+  color: 'blue'
+
 runs:
   using: 'composite'
   steps:
@@ -30,7 +34,7 @@ runs:
       shell: bash
       run: |
         python -m pip install --upgrade pip
-        pip install contracthub
+        pip install "$GITHUB_ACTION_PATH"
 
     - name: Run Schema Compatibility Check
       shell: bash
@@ -46,3 +50,4 @@ runs:
           # Automatic Monorepo Scan Mode
           contracthub scan --against "${{ inputs.base-ref }}" --mode "${{ inputs.mode }}" --format github --output "${GITHUB_STEP_SUMMARY:-/dev/stdout}"
         fi
+

@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package commerce.orders;
+
+enum OrderStatus {
+  ORDER_STATUS_UNSPECIFIED = 0;
+  ORDER_STATUS_PENDING = 1;
+  ORDER_STATUS_CONFIRMED = 2;
+  // Breaking: ORDER_STATUS_CANCELLED removed
+}
+
+message OrderItem {
+  string item_id = 1;
+  // Breaking: quantity type changed from int32 to string
+  string quantity = 2;
+  double price = 3;
+}
+
+message OrderEvent {
+  // Breaking: tag mutated from 1 to 10
+  string order_id = 10;
+  // Breaking: customer_id (tag 2) removed without reserved declaration
+  OrderStatus status = 3;
+  repeated OrderItem items = 4;
+  int64 created_at_ms = 5;
+}

@@ -1,0 +1,43 @@
+name: 'ContractHub Schema Linter'
+description: 'Lint and verify backward or forward compatibility for Protobuf, OpenAPI, and JSON Schema files.'
+author: 'Alexandr Motologa'
+
+inputs:
+  file:
+    description: 'Path to the schema file in the repository'
+    required: true
+  base-file:
+    description: 'Path to the base schema file to compare against (optional if base-ref is used)'
+    required: false
+  base-ref:
+    description: 'Git branch or reference containing the base version (e.g. origin/main)'
+    required: false
+    default: 'origin/main'
+  mode:
+    description: 'Compatibility mode: BACKWARD, FORWARD, or FULL'
+    required: false
+    default: 'FULL'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install ContractHub
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install contracthub
+
+    - name: Run Schema Compatibility Check
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.base-file }}" ]; then
+          contracthub diff "${{ inputs.base-file }}" "${{ inputs.file }}" --mode "${{ inputs.mode }}"
+        else
+          git show "${{ inputs.base-ref }}:${{ inputs.file }}" > /tmp/base_schema
+          contracthub diff /tmp/base_schema "${{ inputs.file }}" --mode "${{ inputs.mode }}"
+        fi

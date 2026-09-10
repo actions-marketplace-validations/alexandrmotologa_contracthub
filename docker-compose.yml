@@ -1,0 +1,21 @@
+services:
+  registry:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: contracthub-registry
+    ports:
+      - "8000:8000"
+    environment:
+      - CONTRACTHUB_DB=sqlite:////data/contracthub.db
+    volumes:
+      - contracthub-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/v1/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  contracthub-data:

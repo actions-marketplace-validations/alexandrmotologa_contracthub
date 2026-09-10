@@ -1,0 +1,6 @@
+- id: contracthub-diff
+  name: contracthub-diff
+  description: Check local schema files for breaking changes against a target branch.
+  entry: contracthub diff
+  language: python
+  files: \.(proto|json|yaml|yml)$

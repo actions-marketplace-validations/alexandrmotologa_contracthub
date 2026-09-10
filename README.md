@@ -1,4 +1,22 @@
-# ContractHub
+<p align="center">
+  <img src="docs/images/logo.png?raw=true" alt="ContractHub Logo" width="130" style="border-radius: 24px;" />
+</p>
+
+<h1 align="center">ContractHub</h1>
+
+<p align="center">
+  <a href="https://github.com/alexandrmotologa/contracthub/actions"><img src="https://github.com/alexandrmotologa/contracthub/actions/workflows/ci.yml/badge.svg" alt="CI Build Status" /></a>
+  <img src="https://img.shields.io/badge/Python-3.12%2B-blue.svg" alt="Python 3.12+" />
+  <img src="https://img.shields.io/badge/FastAPI-Modern%20Async-009688.svg" alt="FastAPI" />
+  <img src="https://img.shields.io/badge/Schemas-Proto3%20%7C%20Avro%20%7C%20OpenAPI%20%7C%20JSON-orange.svg" alt="Supported Schemas" />
+  <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License: MIT" />
+</p>
+
+<p align="center">
+  <strong>Schema Registry & Breaking Change Linter for Protobuf, Avro, OpenAPI, and JSON Schema with wire-compatible Confluent Schema Registry endpoints and CI gating.</strong>
+</p>
+
+---
 
 ContractHub is a schema registry and breaking change linter for Protocol Buffers (Proto3), Apache Avro (.avsc), OpenAPI 3.x, and JSON Schema. It helps teams maintain data compatibility across event streams and HTTP services by analyzing schema syntax trees, checking semantic rules, and blocking incompatible pull requests in CI pipelines.
 

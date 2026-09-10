@@ -4,7 +4,6 @@ Evaluates schema candidate updates against base schemas across Proto3, OpenAPI, 
 definitions according to BACKWARD, FORWARD, and FULL compatibility modes.
 """
 
-
 from contracthub.core.models import (
     CompatibilityMode,
     CompatibilityResult,
@@ -93,7 +92,11 @@ class SchemaComparator:
         trimmed = content.strip()
         if trimmed.startswith("syntax =") or 'syntax="' in trimmed or "syntax = " in trimmed:
             return SchemaType.PROTOBUF
-        if '"type": "record"' in trimmed or '"type":"record"' in trimmed or "'type': 'record'" in trimmed:
+        if (
+            '"type": "record"' in trimmed
+            or '"type":"record"' in trimmed
+            or "'type': 'record'" in trimmed
+        ):
             return SchemaType.AVRO
         if '"openapi":' in trimmed or "'openapi':" in trimmed or "openapi:" in trimmed:
             return SchemaType.OPENAPI
@@ -232,16 +235,16 @@ class SchemaComparator:
             for c_name, cand_field in cand_msg.fields.items():
                 if c_name not in base_msg.fields and cand_field.tag in base_msg.reserved_tags:
                     violations.append(
-                            Violation(
-                                code=PROTO_TAG_COLLISION,
-                                severity=Severity.BREAKING,
-                                path=f"{msg_name}.{c_name}",
-                                message=(
-                                    f"New field '{c_name}' uses tag {cand_field.tag}, "
-                                    f"which was reserved in the base schema."
-                                ),
-                            )
+                        Violation(
+                            code=PROTO_TAG_COLLISION,
+                            severity=Severity.BREAKING,
+                            path=f"{msg_name}.{c_name}",
+                            message=(
+                                f"New field '{c_name}' uses tag {cand_field.tag}, "
+                                f"which was reserved in the base schema."
+                            ),
                         )
+                    )
 
         # 2. Check enums
         for enum_name, base_enum in base.enums.items():
@@ -360,7 +363,11 @@ class SchemaComparator:
                 for p_key, base_param in base_op.parameters.items():
                     if p_key in cand_op.parameters:
                         cand_param = cand_op.parameters[p_key]
-                        if base_param.type and cand_param.type and base_param.type != cand_param.type:
+                        if (
+                            base_param.type
+                            and cand_param.type
+                            and base_param.type != cand_param.type
+                        ):
                             violations.append(
                                 Violation(
                                     code=REST_PARAM_TYPE_MUTATED,
@@ -492,7 +499,10 @@ class SchemaComparator:
         for f_name, base_field in base.fields.items():
             checks += 1
             if f_name not in cand.fields:
-                if mode in (CompatibilityMode.FORWARD, CompatibilityMode.FULL) and not base_field.has_default:
+                if (
+                    mode in (CompatibilityMode.FORWARD, CompatibilityMode.FULL)
+                    and not base_field.has_default
+                ):
                     violations.append(
                         Violation(
                             code=AVRO_FIELD_REMOVED_NO_DEFAULT,
@@ -518,7 +528,10 @@ class SchemaComparator:
         for c_name, cand_field in cand.fields.items():
             if c_name not in base.fields:
                 checks += 1
-                if mode in (CompatibilityMode.BACKWARD, CompatibilityMode.FULL) and not cand_field.has_default:
+                if (
+                    mode in (CompatibilityMode.BACKWARD, CompatibilityMode.FULL)
+                    and not cand_field.has_default
+                ):
                     violations.append(
                         Violation(
                             code=AVRO_FIELD_ADDED_NO_DEFAULT,

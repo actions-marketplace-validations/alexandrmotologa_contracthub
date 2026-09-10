@@ -30,7 +30,9 @@ ContractHub also exposes a wire-compatible API for Confluent Schema Registry cli
 
 - AST-level compatibility checks for Proto3, Apache Avro (.avsc), OpenAPI 3.x, and JSON Schema.
 - Three compatibility modes: BACKWARD, FORWARD, and FULL.
-- CLI suite (`contracthub diff`, `contracthub check`, `contracthub scan`, `contracthub fix`, `contracthub mock`).
+- Semantic Versioning (SemVer) recommendation engine (`MAJOR`, `MINOR`, `PATCH`) based on schema diffs.
+- Live Payload Validator checking JSON payloads against Proto, Avro, OpenAPI, and JSON Schema.
+- CLI suite (`contracthub diff`, `contracthub check`, `contracthub scan`, `contracthub fix`, `contracthub mock`, `contracthub semver`, `contracthub validate`).
 - Monorepo scanner with automatic git diff detection and GitHub Actions Markdown summaries.
 - Auto-remediation engine to automatically preserve deleted Protobuf tags and names with `reserved`.
 - Synthetic mock data generator producing realistic JSON payloads from schemas.
@@ -186,6 +188,22 @@ Produce mock JSON data directly from a schema file or the REST API:
 
 ```bash
 contracthub mock --file examples/order_v1.proto --message Order --output mock_order.json
+```
+
+### 8. Automated SemVer Bump Recommendation
+
+Analyze schema evolution to determine whether a changesets requires a `MAJOR`, `MINOR`, or `PATCH` version bump:
+
+```bash
+contracthub semver examples/order_v1.proto examples/order_v2_breaking.proto --current-version 1.4.0
+```
+
+### 9. Live Payload Validation
+
+Validate real JSON payloads or API responses against schema files:
+
+```bash
+contracthub validate --file examples/customer_v1.json --payload payload.json
 ```
 
 ## GitHub Action Usage

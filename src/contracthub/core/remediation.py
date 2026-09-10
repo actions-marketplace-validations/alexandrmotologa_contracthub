@@ -49,24 +49,24 @@ class AutoRemediator:
             if v.code == PROTO_FIELD_REMOVED and v.severity == Severity.BREAKING and "." in v.path:
                 msg_name, field_name = v.path.split(".", 1)
                 # Extract tag from message: "Field 'customer_id' (tag 2) was deleted..."
-                tag_match = re.search(r'\(tag\s+(\d+)\)', v.message)
+                tag_match = re.search(r"\(tag\s+(\d+)\)", v.message)
                 if tag_match:
                     tag = int(tag_match.group(1))
                     field_removals.append((msg_name, field_name, tag))
 
         for msg_name, f_name, tag in field_removals:
             # Locate message block in candidate content
-            pattern = re.compile(rf'\bmessage\s+{re.escape(msg_name)}\s*\{{')
+            pattern = re.compile(rf"\bmessage\s+{re.escape(msg_name)}\s*\{{")
             match = pattern.search(fixed)
             if match:
                 insert_pos = match.end()
-                fix_statement = f"\n  reserved {tag};\n  reserved \"{f_name}\";"
+                fix_statement = f'\n  reserved {tag};\n  reserved "{f_name}";'
                 fixed = fixed[:insert_pos] + fix_statement + fixed[insert_pos:]
                 actions.append(
                     RemediationAction(
                         rule_code=PROTO_FIELD_REMOVED,
                         target=f"{msg_name}.{f_name}",
-                        description=f"Injected reserved tag {tag} and name \"{f_name}\" into message {msg_name}.",
+                        description=f'Injected reserved tag {tag} and name "{f_name}" into message {msg_name}.',
                         patch_snippet=fix_statement.strip(),
                     )
                 )
@@ -74,16 +74,20 @@ class AutoRemediator:
         # 2. Handle PROTO_ENUM_VALUE_REMOVED
         # Path: EnumName.VAL_NAME, message has: "Enum value 'VAL_NAME' (3) was removed..."
         for v in cmp_result.violations:
-            if v.code == PROTO_ENUM_VALUE_REMOVED and v.severity == Severity.BREAKING and "." in v.path:
+            if (
+                v.code == PROTO_ENUM_VALUE_REMOVED
+                and v.severity == Severity.BREAKING
+                and "." in v.path
+            ):
                 enum_name, val_name = v.path.split(".", 1)
-                num_match = re.search(r'\((\d+)\)', v.message)
+                num_match = re.search(r"\((\d+)\)", v.message)
                 if num_match:
                     num = int(num_match.group(1))
-                    pattern = re.compile(rf'\benum\s+{re.escape(enum_name)}\s*\{{')
+                    pattern = re.compile(rf"\benum\s+{re.escape(enum_name)}\s*\{{")
                     match = pattern.search(fixed)
                     if match:
                         insert_pos = match.end()
-                        fix_statement = f"\n  reserved {num};\n  reserved \"{val_name}\";"
+                        fix_statement = f'\n  reserved {num};\n  reserved "{val_name}";'
                         fixed = fixed[:insert_pos] + fix_statement + fixed[insert_pos:]
                         actions.append(
                             RemediationAction(

@@ -15,11 +15,15 @@ from contracthub.core.mock_generator import MockGenerator
 from contracthub.core.models import CompatibilityMode
 from contracthub.core.remediation import AutoRemediator
 from contracthub.core.scanner import GitScanner
+from contracthub.core.semver import SemVerEngine
+from contracthub.core.validator import PayloadValidator
 from contracthub.tui.diff_viewer import (
     render_diff_table,
     render_github_summary,
     render_json_result,
     render_scan_table,
+    render_semver_report,
+    render_validation_report,
 )
 
 app = typer.Typer(
@@ -32,7 +36,9 @@ console = Console()
 
 def version_callback(value: bool):
     if value:
-        console.print(f"[bold cyan]ContractHub[/bold cyan] version [bold white]{__version__}[/bold white]")
+        console.print(
+            f"[bold cyan]ContractHub[/bold cyan] version [bold white]{__version__}[/bold white]"
+        )
         raise typer.Exit()
 
 
@@ -73,7 +79,9 @@ def diff(
         raise typer.Exit(code=2)
 
     if not candidate_file.exists():
-        console.print(f"[bold red]Error:[/bold red] Candidate file '{candidate_file}' does not exist.")
+        console.print(
+            f"[bold red]Error:[/bold red] Candidate file '{candidate_file}' does not exist."
+        )
         raise typer.Exit(code=2)
 
     try:
@@ -175,7 +183,9 @@ def fix(
         console.print(f"[bold red]Error:[/bold red] Base file '{base_file}' does not exist.")
         raise typer.Exit(code=2)
     if not candidate_file.exists():
-        console.print(f"[bold red]Error:[/bold red] Candidate file '{candidate_file}' does not exist.")
+        console.print(
+            f"[bold red]Error:[/bold red] Candidate file '{candidate_file}' does not exist."
+        )
         raise typer.Exit(code=2)
 
     base_content = base_file.read_text(encoding="utf-8")
@@ -187,16 +197,22 @@ def fix(
     )
 
     if not result.was_modified:
-        console.print("[green]No auto-remediable breaking changes found (schema is either compatible or contains non-trivial mutations).[/green]")
+        console.print(
+            "[green]No auto-remediable breaking changes found (schema is either compatible or contains non-trivial mutations).[/green]"
+        )
         raise typer.Exit(code=0)
 
-    console.print(f"[bold cyan]Identified {len(result.actions)} auto-remediation fix(es):[/bold cyan]")
+    console.print(
+        f"[bold cyan]Identified {len(result.actions)} auto-remediation fix(es):[/bold cyan]"
+    )
     for act in result.actions:
         console.print(f"  - [yellow]{act.target}[/yellow]: {act.description}")
         console.print(f"    [dim]{act.patch_snippet}[/dim]")
 
     if dry_run or not in_place:
-        console.print("\n[yellow]Run with '--in-place' (-i) to apply these fixes directly to the candidate file.[/yellow]")
+        console.print(
+            "\n[yellow]Run with '--in-place' (-i) to apply these fixes directly to the candidate file.[/yellow]"
+        )
     else:
         candidate_file.write_text(result.fixed_content, encoding="utf-8")
         console.print(f"\n[bold green]Successfully applied fixes to {candidate_file}![/bold green]")
@@ -241,8 +257,98 @@ def mock(
 
 
 @app.command()
+def semver(
+    base_file: Path = typer.Argument(..., help="Path to base (previous) schema file."),
+    candidate_file: Path = typer.Argument(..., help="Path to candidate (updated) schema file."),
+    current: str = typer.Option(
+        "1.0.0", "--current", "-c", help="Current semantic version (e.g. 1.2.0)."
+    ),
+    mode: CompatibilityMode = typer.Option(
+        CompatibilityMode.FULL, "--mode", "-m", help="Compatibility mode."
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Output raw JSON recommendation."),
+):
+    """Compute and recommend the next Semantic Version (MAJOR, MINOR, PATCH)."""
+    if not base_file.exists():
+        console.print(f"[bold red]Error:[/bold red] Base file '{base_file}' does not exist.")
+        raise typer.Exit(code=2)
+    if not candidate_file.exists():
+        console.print(
+            f"[bold red]Error:[/bold red] Candidate file '{candidate_file}' does not exist."
+        )
+        raise typer.Exit(code=2)
+
+    base_content = base_file.read_text(encoding="utf-8")
+    candidate_content = candidate_file.read_text(encoding="utf-8")
+    schema_type = SchemaComparator.detect_schema_type(candidate_content, candidate_file.name)
+
+    rec = SemVerEngine.recommend_bump(
+        base_content=base_content,
+        candidate_content=candidate_content,
+        schema_type=schema_type,
+        current_version=current,
+        mode=mode,
+    )
+
+    if json_output:
+        console.print(json.dumps(rec.model_dump(), indent=2))
+    else:
+        render_semver_report(rec, base_file.name, candidate_file.name)
+
+    if rec.is_breaking:
+        raise typer.Exit(code=1)
+
+
+@app.command()
+def validate(
+    file: Path = typer.Option(..., "--file", "-f", help="Schema file to validate against."),
+    payload: Path = typer.Option(
+        ..., "--payload", "-p", help="Path to JSON payload file or '-' for stdin."
+    ),
+    message: str | None = typer.Option(
+        None, "--message", "-m", help="Target message or component entity name."
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Output raw JSON validation result."),
+):
+    """Validate a JSON payload against a contract schema definition."""
+    import sys
+
+    if not file.exists():
+        console.print(f"[bold red]Error:[/bold red] Schema file '{file}' does not exist.")
+        raise typer.Exit(code=2)
+
+    if str(payload) == "-":
+        payload_data = sys.stdin.read()
+    else:
+        if not payload.exists():
+            console.print(f"[bold red]Error:[/bold red] Payload file '{payload}' does not exist.")
+            raise typer.Exit(code=2)
+        payload_data = payload.read_text(encoding="utf-8")
+
+    schema_content = file.read_text(encoding="utf-8")
+    schema_type = SchemaComparator.detect_schema_type(schema_content, file.name)
+
+    result = PayloadValidator.validate(
+        schema_content=schema_content,
+        payload=payload_data,
+        schema_type=schema_type,
+        target_entity=message,
+    )
+
+    if json_output:
+        console.print(json.dumps(result.model_dump(mode="json"), indent=2))
+    else:
+        render_validation_report(result, file.name)
+
+    if not result.is_valid:
+        raise typer.Exit(code=1)
+
+
+@app.command()
 def check(
-    subject: str = typer.Option(..., "--subject", "-s", help="Schema subject name in the registry."),
+    subject: str = typer.Option(
+        ..., "--subject", "-s", help="Schema subject name in the registry."
+    ),
     file: Path = typer.Option(..., "--file", "-f", help="Local candidate schema file to verify."),
     url: str = typer.Option(
         settings.registry_url,
@@ -277,7 +383,9 @@ def check(
                 )
                 raise typer.Exit(code=0)
             elif resp.status_code != 200:
-                console.print(f"[bold red]Registry returned error {resp.status_code}:[/bold red] {resp.text}")
+                console.print(
+                    f"[bold red]Registry returned error {resp.status_code}:[/bold red] {resp.text}"
+                )
                 raise typer.Exit(code=2)
 
             data = resp.json()
@@ -346,7 +454,9 @@ def register(
                     f"(ID: {data['id']}, Type: {data['schema_type']})"
                 )
             elif resp.status_code == 422:
-                console.print("[bold red]Schema registration rejected due to compatibility violations:[/bold red]")
+                console.print(
+                    "[bold red]Schema registration rejected due to compatibility violations:[/bold red]"
+                )
                 detail = resp.json().get("detail", {})
                 console.print(detail)
                 raise typer.Exit(code=1)
@@ -371,7 +481,9 @@ def serve(
     if db:
         os.environ["CONTRACTHUB_DB"] = db
 
-    console.print(f"[bold cyan]Starting ContractHub Registry on[/bold cyan] [bold white]http://{host}:{port}[/bold white]")
+    console.print(
+        f"[bold cyan]Starting ContractHub Registry on[/bold cyan] [bold white]http://{host}:{port}[/bold white]"
+    )
     console.print(f"  Web Diff Studio: [green]http://{host}:{port}/studio[/green]")
     console.print(f"  Swagger Docs:    [green]http://{host}:{port}/docs[/green]")
     console.print(f"  Confluent API:   [green]http://{host}:{port}/subjects[/green]")

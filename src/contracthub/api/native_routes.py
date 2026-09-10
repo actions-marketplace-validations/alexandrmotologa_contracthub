@@ -13,6 +13,8 @@ from contracthub.core.models import (
     CompatibilityResult,
     SchemaType,
 )
+from contracthub.core.semver import SemVerEngine, SemVerRecommendation
+from contracthub.core.validator import PayloadValidator, ValidationResult
 from contracthub.core.webhook_dispatcher import WebhookDispatcher
 from contracthub.storage.database import WebhookModel, get_db
 from contracthub.storage.repository import SchemaRepository
@@ -146,9 +148,7 @@ def register_schema(
     db: Session = Depends(get_db),
 ):
     repo = SchemaRepository(db)
-    schema_type = payload.schema_type or SchemaComparator.detect_schema_type(
-        payload.schema_content
-    )
+    schema_type = payload.schema_type or SchemaComparator.detect_schema_type(payload.schema_content)
 
     subj = repo.get_subject(subject)
     mode = payload.mode
@@ -236,9 +236,7 @@ def test_subject_compatibility(
             detail=f"Target version '{version}' not found for subject '{subject}'",
         )
 
-    schema_type = payload.schema_type or SchemaComparator.detect_schema_type(
-        payload.schema_content
-    )
+    schema_type = payload.schema_type or SchemaComparator.detect_schema_type(payload.schema_content)
     subj = repo.get_subject(subject)
     mode = payload.mode or (
         CompatibilityMode(subj.compatibility_mode) if subj else CompatibilityMode.FULL
@@ -254,9 +252,7 @@ def test_subject_compatibility(
 
 @router.post("/diff", response_model=CompatibilityResult)
 def direct_diff(payload: DirectDiffRequest):
-    schema_type = payload.schema_type or SchemaComparator.detect_schema_type(
-        payload.base_schema
-    )
+    schema_type = payload.schema_type or SchemaComparator.detect_schema_type(payload.base_schema)
     return SchemaComparator.compare_strings(
         base_content=payload.base_schema,
         candidate_content=payload.candidate_schema,
@@ -339,3 +335,111 @@ def delete_webhook(webhook_id: int, db: Session = Depends(get_db)):
     db.delete(wh)
     db.commit()
     return {"status": "deleted", "webhook_id": webhook_id}
+
+
+class DirectValidateRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    schema_content: str = Field(alias="schema")
+    payload: Any
+    schema_type: SchemaType | None = Field(default=None, alias="schemaType")
+    target_entity: str | None = None
+
+
+class SubjectValidateRequest(BaseModel):
+    payload: Any
+    target_entity: str | None = None
+
+
+@router.post("/validate", response_model=ValidationResult)
+def validate_payload_direct(payload: DirectValidateRequest) -> ValidationResult:
+    """Validate a JSON payload directly against an arbitrary schema string."""
+    return PayloadValidator.validate(
+        schema_content=payload.schema_content,
+        payload=payload.payload,
+        schema_type=payload.schema_type,
+        target_entity=payload.target_entity,
+    )
+
+
+@router.post("/subjects/{subject}/versions/{version}/validate", response_model=ValidationResult)
+def validate_payload_against_subject(
+    subject: str,
+    version: int,
+    payload: SubjectValidateRequest,
+    db: Session = Depends(get_db),
+) -> ValidationResult:
+    """Validate a JSON payload against a registered subject version."""
+    schema_obj = SchemaRepository.get_version(db, subject, version)
+    if not schema_obj:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Subject '{subject}' version {version} not found",
+        )
+
+    return PayloadValidator.validate(
+        schema_content=schema_obj.schema_content,
+        payload=payload.payload,
+        schema_type=SchemaType(schema_obj.schema_type),
+        target_entity=payload.target_entity,
+    )
+
+
+class DirectSemVerRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    base_schema: str = Field(alias="baseSchema")
+    candidate_schema: str = Field(alias="candidateSchema")
+    current_version: str = "1.0.0"
+    schema_type: SchemaType | None = Field(default=None, alias="schemaType")
+    mode: CompatibilityMode = CompatibilityMode.FULL
+
+
+class SubjectSemVerRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    candidate_schema: str = Field(alias="candidateSchema")
+    current_version: str | None = None
+    mode: CompatibilityMode = CompatibilityMode.FULL
+
+
+@router.post("/semver", response_model=SemVerRecommendation)
+def recommend_semver_direct(payload: DirectSemVerRequest) -> SemVerRecommendation:
+    """Recommend next SemVer bump for arbitrary base and candidate schemas."""
+    schema_type = payload.schema_type or SchemaComparator.detect_schema_type(
+        payload.candidate_schema
+    )
+    return SemVerEngine.recommend_bump(
+        base_content=payload.base_schema,
+        candidate_content=payload.candidate_schema,
+        schema_type=schema_type,
+        current_version=payload.current_version,
+        mode=payload.mode,
+    )
+
+
+@router.post("/subjects/{subject}/versions/{version}/semver", response_model=SemVerRecommendation)
+def recommend_semver_against_subject(
+    subject: str,
+    version: int,
+    payload: SubjectSemVerRequest,
+    db: Session = Depends(get_db),
+) -> SemVerRecommendation:
+    """Recommend next SemVer bump for a candidate schema against a registered subject version."""
+    base_obj = SchemaRepository.get_version(db, subject, version)
+    if not base_obj:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Subject '{subject}' version {version} not found",
+        )
+
+    cur_version = payload.current_version or f"1.{version}.0"
+    schema_type = SchemaType(base_obj.schema_type)
+
+    return SemVerEngine.recommend_bump(
+        base_content=base_obj.schema_content,
+        candidate_content=payload.candidate_schema,
+        schema_type=schema_type,
+        current_version=cur_version,
+        mode=payload.mode,
+    )

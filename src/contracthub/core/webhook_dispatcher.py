@@ -30,11 +30,7 @@ class WebhookDispatcher:
         payload: dict[str, Any],
     ) -> list[dict[str, Any]]:
         # Query active webhooks
-        webhooks = (
-            db.query(WebhookModel)
-            .filter(WebhookModel.is_active.is_(True))
-            .all()
-        )
+        webhooks = db.query(WebhookModel).filter(WebhookModel.is_active.is_(True)).all()
 
         results = []
         payload_bytes = json.dumps(payload, sort_keys=True).encode("utf-8")
@@ -58,18 +54,22 @@ class WebhookDispatcher:
             try:
                 with httpx.Client(timeout=5.0) as client:
                     resp = client.post(wh.url, content=payload_bytes, headers=headers)
-                    results.append({
+                    results.append(
+                        {
+                            "webhook_id": wh.id,
+                            "url": wh.url,
+                            "status_code": resp.status_code,
+                            "success": 200 <= resp.status_code < 300,
+                        }
+                    )
+            except (httpx.HTTPError, OSError) as exc:
+                results.append(
+                    {
                         "webhook_id": wh.id,
                         "url": wh.url,
-                        "status_code": resp.status_code,
-                        "success": 200 <= resp.status_code < 300,
-                    })
-            except (httpx.HTTPError, OSError) as exc:
-                results.append({
-                    "webhook_id": wh.id,
-                    "url": wh.url,
-                    "error": str(exc),
-                    "success": False,
-                })
+                        "error": str(exc),
+                        "success": False,
+                    }
+                )
 
         return results

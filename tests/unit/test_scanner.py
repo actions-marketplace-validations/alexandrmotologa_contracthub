@@ -19,8 +19,12 @@ def test_render_github_summary_passed():
         passed_count=2,
         failed_count=0,
         results=[
-            FileScanResult(path="proto/order.proto", is_new_file=False, is_compatible=True, total_checks=10),
-            FileScanResult(path="openapi/api.json", is_new_file=True, is_compatible=True, total_checks=1),
+            FileScanResult(
+                path="proto/order.proto", is_new_file=False, is_compatible=True, total_checks=10
+            ),
+            FileScanResult(
+                path="openapi/api.json", is_new_file=True, is_compatible=True, total_checks=1
+            ),
         ],
     )
     md = render_github_summary(summary)

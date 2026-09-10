@@ -75,7 +75,11 @@ def test_api_webhooks_crud(client: TestClient):
     # 1. Create webhook
     resp = client.post(
         "/v1/webhooks",
-        json={"url": "https://example.com/webhook", "secret": "s3cr3t", "events": "VERSION_REGISTERED"},
+        json={
+            "url": "https://example.com/webhook",
+            "secret": "s3cr3t",
+            "events": "VERSION_REGISTERED",
+        },
     )
     assert resp.status_code == 200
     wh = resp.json()

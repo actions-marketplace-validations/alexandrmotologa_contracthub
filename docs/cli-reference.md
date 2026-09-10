@@ -163,3 +163,50 @@ contracthub mock --file <FILE> [OPTIONS]
 ```bash
 contracthub mock --file proto/payment.proto --message PaymentRequest --output mock_payment.json
 ```
+
+---
+
+### `contracthub semver`
+
+Recommends automated Semantic Versioning (`MAJOR`, `MINOR`, or `PATCH`) by comparing the AST changes between two schemas.
+
+```bash
+contracthub semver <BASE_FILE> <CANDIDATE_FILE> [OPTIONS]
+```
+
+#### Options:
+- `--current-version, -c`: Current version string (e.g. `1.2.0`). Defaults to `1.0.0`.
+- `--mode, -m`: Compatibility mode (`BACKWARD`, `FORWARD`, `FULL`). Defaults to `FULL`.
+- `--format, -f`: Output format (`table`, `json`). Defaults to `table`.
+
+#### Example:
+```bash
+contracthub semver schemas/user_v1.proto schemas/user_v2.proto --current-version 2.1.0
+```
+
+---
+
+### `contracthub validate`
+
+Validates a real JSON data payload against any schema (JSON Schema, OpenAPI component, Protobuf message, or Avro record).
+
+```bash
+contracthub validate --file <FILE> --payload <PAYLOAD> [OPTIONS]
+```
+
+#### Options:
+- `--file, -f`: Path to schema file (required).
+- `--payload, -p`: Path to JSON payload file, or raw JSON string (required).
+- `--entity, -e`: Optional target entity name (e.g. OpenAPI model or Proto message).
+- `--format, -f`: Output format (`table`, `json`). Defaults to `table`.
+
+#### Exit codes:
+- `0`: Payload is strictly valid according to the schema.
+- `1`: Validation errors were detected.
+- `2`: Schema or payload parsing error.
+
+#### Example:
+```bash
+contracthub validate --file proto/user.proto --entity User --payload payload.json
+```
+

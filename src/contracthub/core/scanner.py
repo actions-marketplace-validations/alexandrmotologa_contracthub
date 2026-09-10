@@ -22,6 +22,7 @@ class FileScanResult(BaseModel):
     is_compatible: bool = True
     violations: list[Violation] = Field(default_factory=list)
     total_checks: int = 0
+    recommended_bump: str | None = None
 
     @property
     def breaking_count(self) -> int:
@@ -152,6 +153,7 @@ class GitScanner:
                     is_compatible=True,
                     violations=[],
                     total_checks=1,
+                    recommended_bump="MINOR",
                 )
                 summary.passed_count += 1
                 summary.results.append(res)
@@ -169,12 +171,22 @@ class GitScanner:
                 mode=mode,
             )
 
+            from contracthub.core.semver import SemVerEngine
+
+            semver_rec = SemVerEngine.recommend_bump(
+                base_content=base_content,
+                candidate_content=candidate_content,
+                schema_type=schema_type,
+                mode=mode,
+            )
+
             file_res = FileScanResult(
                 path=rel_path,
                 is_new_file=False,
                 is_compatible=cmp_result.is_compatible,
                 violations=cmp_result.violations,
                 total_checks=cmp_result.total_checks,
+                recommended_bump=semver_rec.bump_type,
             )
 
             if file_res.is_compatible:

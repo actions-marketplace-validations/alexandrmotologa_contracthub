@@ -62,10 +62,7 @@ class OpenApiParser:
 
     @classmethod
     def _parse_operation(cls, method: str, data: dict[str, Any]) -> OpenApiOperationAST:
-        op = OpenApiOperationAST(
-            method=method,
-            operation_id=data.get("operationId")
-        )
+        op = OpenApiOperationAST(method=method, operation_id=data.get("operationId"))
 
         # Parse parameters
         params = data.get("parameters", [])
@@ -77,10 +74,7 @@ class OpenApiParser:
                     p_req = bool(p.get("required", False))
                     p_type = p.get("schema", {}).get("type")
                     op.parameters[f"{p_in}:{p_name}"] = OpenApiParameterAST(
-                        name=p_name,
-                        location=p_in,
-                        required=p_req,
-                        type=p_type
+                        name=p_name, location=p_in, required=p_req, type=p_type
                     )
 
         # Parse requestBody
@@ -101,7 +95,7 @@ class OpenApiParser:
                     op.responses[str(status)] = OpenApiResponseAST(
                         status_code=str(status),
                         description=desc,
-                        content_types=content if isinstance(content, dict) else {}
+                        content_types=content if isinstance(content, dict) else {},
                     )
 
         return op

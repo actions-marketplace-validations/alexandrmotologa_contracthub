@@ -101,17 +101,25 @@ def render_scan_table(summary) -> None:
         console.print()
 
     table = Table(title="Scanned Schema Files", header_style="bold magenta", border_style="dim")
-    table.add_column("Status", justify="center", width=12)
-    table.add_column("Schema File", style="cyan", width=36)
-    table.add_column("Breaking", justify="center", width=10)
+    table.add_column("Status", justify="center", width=10)
+    table.add_column("Schema File", style="cyan", width=34)
+    table.add_column("Breaking", justify="center", width=8)
+    table.add_column("SemVer Bump", justify="center", width=12)
     table.add_column("Notes", style="white")
 
     for item in summary.results:
+        bump = getattr(item, "recommended_bump", None) or "-"
+        bump_style = (
+            "bold red" if bump == "MAJOR" else ("bold yellow" if bump == "MINOR" else "green")
+        )
+        bump_text = Text(bump, style=bump_style)
+
         if item.is_new_file:
             table.add_row(
                 Text("NEW", style="bold blue"),
                 item.path,
                 "0",
+                bump_text,
                 "Newly added schema (compatible)",
             )
         elif item.is_compatible:
@@ -119,6 +127,7 @@ def render_scan_table(summary) -> None:
                 Text("PASSED", style="bold green"),
                 item.path,
                 "0",
+                bump_text,
                 f"{item.total_checks} checks passed",
             )
         else:
@@ -127,6 +136,7 @@ def render_scan_table(summary) -> None:
                 Text("FAILED", style="bold red"),
                 item.path,
                 str(item.breaking_count),
+                bump_text,
                 first_v,
             )
 
@@ -150,28 +160,81 @@ def render_github_summary(summary) -> str:
             f"Found breaking changes in **{summary.failed_count}** of **{summary.total_scanned}** schema file(s) evaluated against `{summary.target_ref}`.\n"
         )
 
-    lines.append("| Status | Schema File | Breaking Issues | Details |")
-    lines.append("| :---: | :--- | :---: | :--- |")
+    lines.append("| Status | Schema File | Breaking Issues | Recommended Bump | Details |")
+    lines.append("| :---: | :--- | :---: | :---: | :--- |")
 
     for item in summary.results:
+        bump = getattr(item, "recommended_bump", None) or "-"
         if item.is_new_file:
-            lines.append(f"| NEW | `{item.path}` | 0 | Newly introduced schema |")
+            lines.append(f"| NEW | `{item.path}` | 0 | **{bump}** | Newly introduced schema |")
         elif item.is_compatible:
-            lines.append(f"| PASSED | `{item.path}` | 0 | Compatible evolution |")
+            lines.append(f"| PASSED | `{item.path}` | 0 | **{bump}** | Compatible evolution |")
         else:
-            lines.append(f"| FAILED | `{item.path}` | {item.breaking_count} | Breaking changes detected |")
+            lines.append(
+                f"| FAILED | `{item.path}` | {item.breaking_count} | **{bump}** | Breaking changes detected |"
+            )
 
     lines.append("\n")
 
     # Detailed collapsible tables for failed files
     for item in summary.results:
         if not item.is_compatible:
-            lines.append(f"<details><summary><strong>Violations in {item.path} ({item.breaking_count} issues)</strong></summary>\n")
+            lines.append(
+                f"<details><summary><strong>Violations in {item.path} ({item.breaking_count} issues)</strong></summary>\n"
+            )
             lines.append("| Severity | Code | Path | Message | Suggestion |")
             lines.append("| :--- | :--- | :--- | :--- | :--- |")
             for v in item.violations:
                 sug = v.suggestion or "-"
-                lines.append(f"| `{v.severity.value}` | `{v.code}` | `{v.path}` | {v.message} | {sug} |")
+                lines.append(
+                    f"| `{v.severity.value}` | `{v.code}` | `{v.path}` | {v.message} | {sug} |"
+                )
             lines.append("\n</details>\n")
 
     return "\n".join(lines)
+
+
+def render_semver_report(rec, base_name: str, candidate_name: str) -> None:
+    """Renders formatted SemVer progression recommendation."""
+    style_color = (
+        "red" if rec.bump_type == "MAJOR" else ("yellow" if rec.bump_type == "MINOR" else "green")
+    )
+    title = Text(
+        f" SEMVER RECOMMENDATION: {rec.bump_type} BUMP ", style=f"bold white on {style_color}"
+    )
+
+    summary_text = (
+        f"Current Version:     [cyan]{rec.current_version}[/cyan]\n"
+        f"Recommended Version: [bold {style_color}]{rec.recommended_version}[/bold {style_color}] ([bold]{rec.bump_type}[/bold])\n"
+        f"Base:                [cyan]{base_name}[/cyan]\n"
+        f"Candidate:           [cyan]{candidate_name}[/cyan]\n"
+        f"Reason:              {rec.reason}"
+    )
+    console.print()
+    console.print(Panel(summary_text, title=title, border_style=style_color, expand=False))
+    console.print()
+
+
+def render_validation_report(res, target_name: str) -> None:
+    """Renders formatted payload validation report."""
+    if res.is_valid:
+        title = Text(" PAYLOAD VALIDATION: PASSED ", style="bold white on green")
+        summary_text = (
+            f"[bold green]Payload conforms to schema definition.[/bold green]\n"
+            f"Schema Type:   [cyan]{res.schema_type.value}[/cyan]\n"
+            f"Target Entity: [cyan]{res.target_entity or 'root'}[/cyan]"
+        )
+        console.print()
+        console.print(Panel(summary_text, title=title, border_style="green", expand=False))
+        console.print()
+    else:
+        title = Text(" PAYLOAD VALIDATION: FAILED ", style="bold white on red")
+        summary_text = (
+            f"[bold red]Payload violates schema specification ({len(res.errors)} error(s))![/bold red]\n"
+            f"Schema Type:   [cyan]{res.schema_type.value}[/cyan]\n"
+            f"Target Entity: [cyan]{res.target_entity or 'root'}[/cyan]\n\n"
+            + "\n".join(f"• [red]{err}[/red]" for err in res.errors)
+        )
+        console.print()
+        console.print(Panel(summary_text, title=title, border_style="red", expand=False))
+        console.print()

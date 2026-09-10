@@ -47,5 +47,5 @@ class JsonSchemaParser:
             properties=properties,
             required=required,
             additional_properties=additional_props if isinstance(additional_props, bool) else None,
-            raw=data
+            raw=data,
         )

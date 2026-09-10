@@ -28,7 +28,7 @@ class ProtoParser:
             ast.syntax = syntax_match.group(1)
 
         # Parse package
-        pkg_match = re.search(r'package\s+([a-zA-Z0-9_.]+);', cleaned)
+        pkg_match = re.search(r"package\s+([a-zA-Z0-9_.]+);", cleaned)
         if pkg_match:
             ast.package = pkg_match.group(1)
 
@@ -54,12 +54,12 @@ class ProtoParser:
     @classmethod
     def _strip_comments(cls, content: str) -> str:
         # Remove multi-line comments
-        content = re.sub(r'/\*.*?\*/', '', content, flags=re.DOTALL)
+        content = re.sub(r"/\*.*?\*/", "", content, flags=re.DOTALL)
         # Remove single-line comments
         lines = []
         for line in content.splitlines():
             # Check if '//' appears outside quotes
-            stripped_line = re.sub(r'//.*$', '', line)
+            stripped_line = re.sub(r"//.*$", "", line)
             lines.append(stripped_line)
         return "\n".join(lines)
 
@@ -67,7 +67,7 @@ class ProtoParser:
     def _extract_top_blocks(cls, content: str) -> list[tuple[str, str, str]]:
         """Extract top-level message and enum declarations with their bodies."""
         blocks = []
-        pattern = re.compile(r'\b(message|enum)\s+([a-zA-Z0-9_]+)\s*\{')
+        pattern = re.compile(r"\b(message|enum)\s+([a-zA-Z0-9_]+)\s*\{")
         idx = 0
         while idx < len(content):
             match = pattern.search(content, idx)
@@ -79,7 +79,7 @@ class ProtoParser:
             brace_end = cls._find_matching_brace(content, brace_start)
             if brace_end == -1:
                 break
-            body = content[brace_start + 1:brace_end]
+            body = content[brace_start + 1 : brace_end]
             blocks.append((block_type, name, body))
             idx = brace_end + 1
         return blocks
@@ -89,9 +89,9 @@ class ProtoParser:
         depth = 0
         for i in range(start_idx, len(content)):
             char = content[i]
-            if char == '{':
+            if char == "{":
                 depth += 1
-            elif char == '}':
+            elif char == "}":
                 depth -= 1
                 if depth == 0:
                     return i
@@ -103,7 +103,7 @@ class ProtoParser:
 
         # First, extract any nested message or enum blocks
         nested_spans = []
-        pattern = re.compile(r'\b(message|enum)\s+([a-zA-Z0-9_]+)\s*\{')
+        pattern = re.compile(r"\b(message|enum)\s+([a-zA-Z0-9_]+)\s*\{")
         idx = 0
         while idx < len(body):
             match = pattern.search(body, idx)
@@ -116,7 +116,7 @@ class ProtoParser:
             brace_end = cls._find_matching_brace(body, brace_start)
             if brace_end == -1:
                 break
-            b_body = body[brace_start + 1:brace_end]
+            b_body = body[brace_start + 1 : brace_end]
             if b_type == "message":
                 msg.nested_messages[b_name] = cls._parse_message(b_name, b_body)
             elif b_type == "enum":
@@ -128,7 +128,7 @@ class ProtoParser:
         cleaned_body_chars = list(body)
         for start, end in nested_spans:
             for i in range(start, end):
-                cleaned_body_chars[i] = ' '
+                cleaned_body_chars[i] = " "
         direct_body = "".join(cleaned_body_chars)
 
         # Parse statements separated by ';'
@@ -137,10 +137,10 @@ class ProtoParser:
         for stmt in statements:
             # Check reserved statements
             if stmt.startswith("reserved "):
-                rest = stmt[len("reserved "):].strip()
+                rest = stmt[len("reserved ") :].strip()
                 if rest.startswith(('"', "'")):
                     # Reserved names: reserved "foo", "bar"
-                    names = [n.strip(' "\'') for n in rest.split(",") if n.strip()]
+                    names = [n.strip(" \"'") for n in rest.split(",") if n.strip()]
                     msg.reserved_names.extend(names)
                 else:
                     # Reserved tags: reserved 2, 15, 9 to 11
@@ -166,8 +166,8 @@ class ProtoParser:
             # e.g.: string order_id = 1;
             # e.g.: map<string, int32> attributes = 5;
             field_match = re.match(
-                r'^(?:(optional|repeated)\s+)?(map<[^>]+>|[a-zA-Z0-9_.]+)\s+([a-zA-Z0-9_]+)\s*=\s*(\d+)(?:\s*\[.*\])?$',
-                stmt
+                r"^(?:(optional|repeated)\s+)?(map<[^>]+>|[a-zA-Z0-9_.]+)\s+([a-zA-Z0-9_]+)\s*=\s*(\d+)(?:\s*\[.*\])?$",
+                stmt,
             )
             if field_match:
                 cardinality = field_match.group(1) or "singular"
@@ -176,10 +176,7 @@ class ProtoParser:
                 tag = int(field_match.group(4))
 
                 field = ProtoFieldAST(
-                    name=field_name,
-                    tag=tag,
-                    type=field_type,
-                    cardinality=cardinality
+                    name=field_name, tag=tag, type=field_type, cardinality=cardinality
                 )
                 msg.fields[field_name] = field
                 msg.fields_by_tag[tag] = field
@@ -193,9 +190,9 @@ class ProtoParser:
 
         for stmt in statements:
             if stmt.startswith("reserved "):
-                rest = stmt[len("reserved "):].strip()
+                rest = stmt[len("reserved ") :].strip()
                 if rest.startswith(('"', "'")):
-                    names = [n.strip(' "\'') for n in rest.split(",") if n.strip()]
+                    names = [n.strip(" \"'") for n in rest.split(",") if n.strip()]
                     enum_ast.reserved_names.extend(names)
                 else:
                     for part in rest.split(","):
@@ -215,7 +212,7 @@ class ProtoParser:
                 continue
 
             # Enum item: NAME = 0 [options]
-            match = re.match(r'^([a-zA-Z0-9_]+)\s*=\s*(-?\d+)', stmt)
+            match = re.match(r"^([a-zA-Z0-9_]+)\s*=\s*(-?\d+)", stmt)
             if match:
                 val_name = match.group(1)
                 val_num = int(match.group(2))

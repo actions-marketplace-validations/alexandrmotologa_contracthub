@@ -129,8 +129,7 @@ class MockGenerator:
             return True
         elif isinstance(t, dict) and t.get("type") == "record":
             return {
-                f["name"]: cls._mock_avro_type(f.get("type", "string"))
-                for f in t.get("fields", [])
+                f["name"]: cls._mock_avro_type(f.get("type", "string")) for f in t.get("fields", [])
             }
         return "sample_data"
 

@@ -60,9 +60,7 @@ class SchemaVersionModel(Base):
 
     subject = relationship("SubjectModel", back_populates="versions")
 
-    __table_args__ = (
-        UniqueConstraint("subject_id", "version", name="uq_subject_version"),
-    )
+    __table_args__ = (UniqueConstraint("subject_id", "version", name="uq_subject_version"),)
 
 
 class WebhookModel(Base):
@@ -71,7 +69,9 @@ class WebhookModel(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     url = Column(String(512), nullable=False)
     secret = Column(String(128), nullable=True)
-    events = Column(String(255), default="VERSION_REGISTERED,COMPATIBILITY_REJECTED", nullable=False)
+    events = Column(
+        String(255), default="VERSION_REGISTERED,COMPATIBILITY_REJECTED", nullable=False
+    )
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(
         DateTime(timezone=True),

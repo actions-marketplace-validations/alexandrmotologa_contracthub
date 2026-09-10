@@ -80,7 +80,10 @@ def test_subject_registration_and_enforcement(client: TestClient):
         json={"schema": v2_break, "schemaType": "PROTOBUF"},
     )
     assert resp_break.status_code == 422
-    assert "Candidate schema violates compatibility invariants." in resp_break.json()["detail"]["message"]
+    assert (
+        "Candidate schema violates compatibility invariants."
+        in resp_break.json()["detail"]["message"]
+    )
 
     # 3. Register compatible V2 (should succeed with version 2)
     resp_comp = client.post(

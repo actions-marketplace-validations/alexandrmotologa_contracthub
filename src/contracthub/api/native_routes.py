@@ -14,6 +14,7 @@ from contracthub.core.models import (
     CompatibilityResult,
     SchemaType,
 )
+from contracthub.core.remediation import AutoRemediator, RemediationResult
 from contracthub.core.semver import SemVerEngine, SemVerRecommendation
 from contracthub.core.validator import PayloadValidator, ValidationResult
 from contracthub.core.webhook_dispatcher import WebhookDispatcher
@@ -259,6 +260,27 @@ def direct_diff(payload: DirectDiffRequest):
         candidate_content=payload.candidate_schema,
         schema_type=schema_type,
         mode=payload.mode,
+    )
+
+
+class DirectFixRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    base_schema: str = Field(alias="baseSchema")
+    candidate_schema: str = Field(alias="candidateSchema")
+    schema_type: SchemaType | None = Field(default=None, alias="schemaType")
+
+
+@router.post("/fix", response_model=RemediationResult)
+def direct_fix(payload: DirectFixRequest) -> RemediationResult:
+    """Analyze breaking changes between base and candidate schemas and apply auto-remediation."""
+    schema_type = payload.schema_type or SchemaComparator.detect_schema_type(
+        payload.candidate_schema
+    )
+    return AutoRemediator.fix(
+        base_content=payload.base_schema,
+        candidate_content=payload.candidate_schema,
+        schema_type=schema_type,
     )
 
 

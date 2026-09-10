@@ -38,6 +38,29 @@ def test_studio_page(client: TestClient):
     assert resp.status_code == 200
     assert "<!DOCTYPE html>" in resp.text
     assert "ContractHub Studio" in resp.text
+    assert "Payload Validator" in resp.text
+    assert "Client Codegen" in resp.text
+    assert "Auto-Fix Candidate" in resp.text
+    assert "GRAPHQL" in resp.text
+
+
+def test_direct_fix_endpoint(client: TestClient):
+    base_proto = 'syntax = "proto3"; message User { string id = 1; string email = 2; }'
+    cand_proto = 'syntax = "proto3"; message User { string id = 1; }'
+
+    resp = client.post(
+        "/v1/fix",
+        json={
+            "baseSchema": base_proto,
+            "candidateSchema": cand_proto,
+            "schemaType": "PROTOBUF",
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "reserved 2" in data["fixed_content"]
+    assert len(data["actions"]) > 0
+    assert data["actions"][0]["rule_code"] == "PROTO_FIELD_REMOVED"
 
 
 def test_direct_diff_endpoint(client: TestClient):

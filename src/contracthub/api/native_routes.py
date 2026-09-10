@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
+from contracthub.core.codegen import CodeGenerator
 from contracthub.core.comparator import SchemaComparator
 from contracthub.core.mock_generator import MockGenerator
 from contracthub.core.models import (
@@ -370,7 +371,8 @@ def validate_payload_against_subject(
     db: Session = Depends(get_db),
 ) -> ValidationResult:
     """Validate a JSON payload against a registered subject version."""
-    schema_obj = SchemaRepository.get_version(db, subject, version)
+    repo = SchemaRepository(db)
+    schema_obj = repo.get_version(subject, version)
     if not schema_obj:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -426,7 +428,8 @@ def recommend_semver_against_subject(
     db: Session = Depends(get_db),
 ) -> SemVerRecommendation:
     """Recommend next SemVer bump for a candidate schema against a registered subject version."""
-    base_obj = SchemaRepository.get_version(db, subject, version)
+    repo = SchemaRepository(db)
+    base_obj = repo.get_version(subject, version)
     if not base_obj:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -442,4 +445,73 @@ def recommend_semver_against_subject(
         schema_type=schema_type,
         current_version=cur_version,
         mode=payload.mode,
+    )
+
+
+class DirectCodegenRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    schema_content: str = Field(alias="schema")
+    target: str = "typescript"
+    schema_type: SchemaType | None = Field(default=None, alias="schemaType")
+
+
+class CodegenResponse(BaseModel):
+    code: str
+    target: str
+    schema_type: str
+
+
+@router.post("/codegen", response_model=CodegenResponse)
+def generate_client_models(payload: DirectCodegenRequest) -> CodegenResponse:
+    """Generate typed client data models (TypeScript or Pydantic v2) from schema content."""
+    detected_type = payload.schema_type or SchemaComparator.detect_schema_type(
+        payload.schema_content
+    )
+    code = CodeGenerator.generate(
+        schema_content=payload.schema_content,
+        target=payload.target,
+        schema_type=detected_type,
+    )
+    return CodegenResponse(
+        code=code,
+        target=payload.target,
+        schema_type=detected_type.value,
+    )
+
+
+@router.get("/subjects/{subject}/versions/{version}/codegen", response_model=CodegenResponse)
+def generate_models_from_subject_version(
+    subject: str,
+    version: str,
+    target: str = "typescript",
+    db: Session = Depends(get_db),
+) -> CodegenResponse:
+    """Generate typed client models from a schema version registered in the repository."""
+    repo = SchemaRepository(db)
+    if version == "latest":
+        schema_obj = repo.get_latest_version(subject)
+    else:
+        try:
+            v_int = int(version)
+            schema_obj = repo.get_version(subject, v_int)
+        except ValueError:
+            schema_obj = None
+
+    if not schema_obj:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Schema version '{version}' not found for subject '{subject}'",
+        )
+
+    stype = SchemaType(schema_obj.schema_type)
+    code = CodeGenerator.generate(
+        schema_content=schema_obj.schema_content,
+        target=target,
+        schema_type=stype,
+    )
+    return CodegenResponse(
+        code=code,
+        target=target,
+        schema_type=stype.value,
     )

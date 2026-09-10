@@ -210,3 +210,28 @@ contracthub validate --file <FILE> --payload <PAYLOAD> [OPTIONS]
 contracthub validate --file proto/user.proto --entity User --payload payload.json
 ```
 
+---
+
+### `contracthub codegen`
+
+Generates typed client data models (TypeScript interfaces or Python Pydantic v2 models) directly from contract schemas (Proto3, Apache Avro, JSON Schema, or OpenAPI 3.x).
+
+```bash
+contracthub codegen --file <FILE> [OPTIONS]
+```
+
+#### Options:
+- `--file, -f`: Path to schema file (required).
+- `--target, -t`: Target language or framework (`typescript` or `pydantic`). Defaults to `typescript`.
+- `--output, -o`: Output file path. If omitted, outputs code to standard output.
+
+#### Example:
+```bash
+# Generate TypeScript interfaces to stdout
+contracthub codegen --file proto/order.proto --target typescript
+
+# Generate Pydantic v2 classes to a file
+contracthub codegen --file avro/customer.avsc --target pydantic --output models.py
+```
+
+

@@ -10,6 +10,7 @@ from rich.console import Console
 
 from contracthub import __version__
 from contracthub.config import settings
+from contracthub.core.codegen import CodeGenerator
 from contracthub.core.comparator import SchemaComparator
 from contracthub.core.mock_generator import MockGenerator
 from contracthub.core.models import CompatibilityMode
@@ -342,6 +343,49 @@ def validate(
 
     if not result.is_valid:
         raise typer.Exit(code=1)
+
+
+@app.command()
+def codegen(
+    file: Path = typer.Option(..., "--file", "-f", help="Path to schema file."),
+    target: str = typer.Option(
+        "typescript",
+        "--target",
+        "-t",
+        help="Target language: 'typescript' or 'pydantic'.",
+    ),
+    output: Path | None = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Output file path. If omitted, prints to standard output.",
+    ),
+):
+    """Generate typed client data models (TypeScript interfaces or Python Pydantic v2)."""
+    if not file.exists():
+        console.print(f"[bold red]Error:[/bold red] Schema file '{file}' does not exist.")
+        raise typer.Exit(code=2)
+
+    content = file.read_text(encoding="utf-8")
+    schema_type = SchemaComparator.detect_schema_type(content, file.name)
+
+    try:
+        generated = CodeGenerator.generate(
+            schema_content=content,
+            target=target,
+            schema_type=schema_type,
+        )
+    except (ValueError, TypeError, KeyError, AttributeError) as exc:
+        console.print(f"[bold red]Error generating models:[/bold red] {exc}")
+        raise typer.Exit(code=2)
+
+    if output:
+        output.write_text(generated, encoding="utf-8")
+        console.print(
+            f"[bold green]Successfully generated {target} models in {output}[/bold green]"
+        )
+    else:
+        console.print(generated)
 
 
 @app.command()

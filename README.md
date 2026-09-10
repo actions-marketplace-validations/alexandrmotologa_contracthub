@@ -32,7 +32,8 @@ ContractHub also exposes a wire-compatible API for Confluent Schema Registry cli
 - Three compatibility modes: BACKWARD, FORWARD, and FULL.
 - Semantic Versioning (SemVer) recommendation engine (`MAJOR`, `MINOR`, `PATCH`) based on schema diffs.
 - Live Payload Validator checking JSON payloads against Proto, Avro, OpenAPI, and JSON Schema.
-- CLI suite (`contracthub diff`, `contracthub check`, `contracthub scan`, `contracthub fix`, `contracthub mock`, `contracthub semver`, `contracthub validate`).
+- Multi-protocol client model code generator (`contracthub codegen`) for TypeScript and Python Pydantic v2.
+- CLI suite (`contracthub diff`, `contracthub check`, `contracthub scan`, `contracthub fix`, `contracthub mock`, `contracthub semver`, `contracthub validate`, `contracthub codegen`).
 - Monorepo scanner with automatic git diff detection and GitHub Actions Markdown summaries.
 - Auto-remediation engine to automatically preserve deleted Protobuf tags and names with `reserved`.
 - Synthetic mock data generator producing realistic JSON payloads from schemas.
@@ -204,6 +205,18 @@ Validate real JSON payloads or API responses against schema files:
 
 ```bash
 contracthub validate --file examples/customer_v1.json --payload payload.json
+```
+
+### 10. Client Model Code Generation
+
+Generate typed models for TypeScript or Python Pydantic v2 from any contract:
+
+```bash
+# TypeScript interfaces
+contracthub codegen --file examples/order_v1.proto --target typescript
+
+# Python Pydantic v2 models
+contracthub codegen --file examples/order_v1.avsc --target pydantic --output models.py
 ```
 
 ## GitHub Action Usage

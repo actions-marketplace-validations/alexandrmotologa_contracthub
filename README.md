@@ -207,8 +207,12 @@ contracthub mock --file examples/order_v1.proto --message Order --output mock_or
 Analyze schema evolution to determine whether a changeset requires a `MAJOR`, `MINOR`, or `PATCH` version bump:
 
 ```bash
-contracthub semver examples/order_v1.proto examples/order_v2_breaking.proto --current-version 1.4.0
+contracthub semver examples/order_v1.proto examples/order_v2_breaking.proto --current 1.0.0
 ```
+
+<p align="center">
+  <img src="docs/images/cli_semver.png" alt="ContractHub SemVer Engine" width="95%">
+</p>
 
 ### 9. Live Payload Validation
 
@@ -217,6 +221,10 @@ Validate real JSON payloads or API responses against schema files:
 ```bash
 contracthub validate --file examples/customer_v1.json --payload payload.json
 ```
+
+<p align="center">
+  <img src="docs/images/studio_validator.png" alt="ContractHub Live Payload Validator" width="95%">
+</p>
 
 ### 10. Client Model Code Generation
 
@@ -229,6 +237,10 @@ contracthub codegen --file examples/order_v1.proto --target typescript
 # Python Pydantic v2 models
 contracthub codegen --file examples/order_v1.avsc --target pydantic --output models.py
 ```
+
+<p align="center">
+  <img src="docs/images/studio_codegen.png" alt="ContractHub Client Codegen Studio" width="95%">
+</p>
 
 ### 11. Git Pre-Commit Hook Setup
 

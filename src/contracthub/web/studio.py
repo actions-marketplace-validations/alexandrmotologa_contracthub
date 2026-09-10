@@ -872,12 +872,15 @@ input CreateUserInput {
         if (semverData.bump_type === 'MAJOR') bumpClass = 'semver-major';
         else if (semverData.bump_type === 'MINOR') bumpClass = 'semver-minor';
 
+        const recVer = semverData.recommended_version || semverData.next_version || '2.0.0';
+        const semReason = semverData.reason || semverData.rationale || 'Compatibility verified.';
+
         badgeArea.innerHTML = `
           <div class="semver-badge ${bumpClass}">
-            <span>${semverData.current_version} ➔ Recommended: ${semverData.next_version} (${semverData.bump_type})</span>
+            <span>${semverData.current_version} ➔ Recommended: ${recVer} (${semverData.bump_type})</span>
           </div>
         `;
-        rationaleArea.textContent = 'SemVer Analysis: ' + (semverData.rationale || 'Compatibility verified.');
+        rationaleArea.textContent = 'SemVer Analysis: ' + semReason;
 
         if (diffData.is_compatible) {
           btnAutoFix.style.display = 'none';

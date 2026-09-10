@@ -7,6 +7,7 @@ definitions according to BACKWARD, FORWARD, and FULL compatibility modes.
 from contracthub.core.models import (
     CompatibilityMode,
     CompatibilityResult,
+    GraphQLAST,
     JsonSchemaAST,
     OpenApiAST,
     ProtoAST,
@@ -18,6 +19,11 @@ from contracthub.core.rules import (
     AVRO_FIELD_ADDED_NO_DEFAULT,
     AVRO_FIELD_REMOVED_NO_DEFAULT,
     AVRO_TYPE_MUTATED,
+    GRAPHQL_ENUM_VALUE_REMOVED,
+    GRAPHQL_FIELD_REMOVED,
+    GRAPHQL_FIELD_TYPE_CHANGED,
+    GRAPHQL_INPUT_FIELD_REQUIRED_ADDED,
+    GRAPHQL_TYPE_REMOVED,
     JSON_SCHEMA_PROPERTY_REMOVED,
     JSON_SCHEMA_REQUIRED_ADDED,
     JSON_SCHEMA_TYPE_NARROWED,
@@ -37,6 +43,7 @@ from contracthub.core.rules import (
     REST_STATUS_MUTATED,
 )
 from contracthub.parsers.avro_parser import AvroParser, AvroRecordAST
+from contracthub.parsers.graphql_parser import GraphQLParser
 from contracthub.parsers.json_schema_parser import JsonSchemaParser
 from contracthub.parsers.openapi_parser import OpenApiParser
 from contracthub.parsers.proto_parser import ProtoParser
@@ -76,6 +83,11 @@ class SchemaComparator:
             candidate_ast = AvroParser.parse_string(candidate_content)
             return cls.compare_avro(base_ast, candidate_ast, mode)
 
+        elif schema_type == SchemaType.GRAPHQL:
+            base_ast = GraphQLParser.parse_string(base_content)
+            candidate_ast = GraphQLParser.parse_string(candidate_content)
+            return cls.compare_graphql(base_ast, candidate_ast, mode)
+
         else:
             raise ValueError(f"Unsupported schema type: {schema_type}")
 
@@ -86,6 +98,8 @@ class SchemaComparator:
                 return SchemaType.PROTOBUF
             if filename.endswith(".avsc"):
                 return SchemaType.AVRO
+            if filename.endswith((".graphql", ".gql")):
+                return SchemaType.GRAPHQL
             if "openapi" in filename.lower() or "swagger" in filename.lower():
                 return SchemaType.OPENAPI
 
@@ -98,6 +112,14 @@ class SchemaComparator:
             or "'type': 'record'" in trimmed
         ):
             return SchemaType.AVRO
+        if (
+            "type Query" in trimmed
+            or "type Mutation" in trimmed
+            or "type Subscription" in trimmed
+            or "schema {" in trimmed
+            or trimmed.startswith(("type ", "input ", "enum ", "interface ", "union ", "scalar "))
+        ):
+            return SchemaType.GRAPHQL
         if '"openapi":' in trimmed or "'openapi':" in trimmed or "openapi:" in trimmed:
             return SchemaType.OPENAPI
         if "$schema" in trimmed or '"properties":' in trimmed or "'properties':" in trimmed:
@@ -539,6 +561,156 @@ class SchemaComparator:
                             path=f"{cand.name}.{c_name}",
                             message=f"New field '{c_name}' added to record '{cand.name}' without a default value.",
                             suggestion=f"Specify a 'default' attribute for '{c_name}'.",
+                        )
+                    )
+
+        is_compatible = len([v for v in violations if v.severity == Severity.BREAKING]) == 0
+        return CompatibilityResult(
+            is_compatible=is_compatible,
+            mode=mode,
+            violations=violations,
+            total_checks=checks,
+        )
+
+    @classmethod
+    def compare_graphql(
+        cls,
+        base: GraphQLAST,
+        cand: GraphQLAST,
+        mode: CompatibilityMode = CompatibilityMode.FULL,
+    ) -> CompatibilityResult:
+        """Compare two GraphQL SDL specifications for semantic breaking changes."""
+        violations: list[Violation] = []
+        checks = 0
+
+        # 1. Compare Object Types & Interfaces
+        all_base_types = {**base.types, **base.interfaces}
+        all_cand_types = {**cand.types, **cand.interfaces}
+
+        for type_name, base_type in all_base_types.items():
+            checks += 1
+            if type_name not in all_cand_types:
+                violations.append(
+                    Violation(
+                        code=GRAPHQL_TYPE_REMOVED,
+                        severity=Severity.BREAKING,
+                        path=f"type {type_name}",
+                        message=f"GraphQL type or interface '{type_name}' was removed.",
+                        suggestion=f"Retain '{type_name}' or mark it deprecated.",
+                    )
+                )
+                continue
+
+            cand_type = all_cand_types[type_name]
+            for f_name, base_f in base_type.fields.items():
+                checks += 1
+                if f_name not in cand_type.fields:
+                    violations.append(
+                        Violation(
+                            code=GRAPHQL_FIELD_REMOVED,
+                            severity=Severity.BREAKING,
+                            path=f"{type_name}.{f_name}",
+                            message=f"Field '{f_name}' was removed from type '{type_name}'.",
+                            suggestion=f"Retain field '{f_name}' and mark with @deprecated directive.",
+                        )
+                    )
+                else:
+                    cand_f = cand_type.fields[f_name]
+                    if base_f.raw_type != cand_f.raw_type:
+                        violations.append(
+                            Violation(
+                                code=GRAPHQL_FIELD_TYPE_CHANGED,
+                                severity=Severity.BREAKING,
+                                path=f"{type_name}.{f_name}",
+                                message=(
+                                    f"Field '{f_name}' type changed from '{base_f.raw_type}' "
+                                    f"to '{cand_f.raw_type}'."
+                                ),
+                                suggestion=f"Keep original return type '{base_f.raw_type}'.",
+                            )
+                        )
+
+        # 2. Compare Inputs
+        for input_name, base_input in base.inputs.items():
+            checks += 1
+            if input_name not in cand.inputs:
+                violations.append(
+                    Violation(
+                        code=GRAPHQL_TYPE_REMOVED,
+                        severity=Severity.BREAKING,
+                        path=f"input {input_name}",
+                        message=f"GraphQL input type '{input_name}' was removed.",
+                    )
+                )
+                continue
+
+            cand_input = cand.inputs[input_name]
+            for f_name, base_f in base_input.fields.items():
+                checks += 1
+                if f_name not in cand_input.fields:
+                    violations.append(
+                        Violation(
+                            code=GRAPHQL_FIELD_REMOVED,
+                            severity=Severity.BREAKING,
+                            path=f"{input_name}.{f_name}",
+                            message=f"Field '{f_name}' was removed from input '{input_name}'.",
+                        )
+                    )
+                elif base_f.raw_type != cand_input.fields[f_name].raw_type:
+                    violations.append(
+                        Violation(
+                            code=GRAPHQL_FIELD_TYPE_CHANGED,
+                            severity=Severity.BREAKING,
+                            path=f"{input_name}.{f_name}",
+                            message=(
+                                f"Input field '{f_name}' type changed from '{base_f.raw_type}' "
+                                f"to '{cand_input.fields[f_name].raw_type}'."
+                            ),
+                        )
+                    )
+
+            # Check for new non-null required fields added to input
+            for f_name, cand_f in cand_input.fields.items():
+                checks += 1
+                if f_name not in base_input.fields and cand_f.is_non_null:
+                    violations.append(
+                        Violation(
+                            code=GRAPHQL_INPUT_FIELD_REQUIRED_ADDED,
+                            severity=Severity.BREAKING,
+                            path=f"{input_name}.{f_name}",
+                            message=(
+                                f"New required (non-null) field '{f_name}: {cand_f.raw_type}' "
+                                f"added to input '{input_name}'."
+                            ),
+                            suggestion="Make new input fields nullable or provide a default value.",
+                        )
+                    )
+
+        # 3. Compare Enums
+        for enum_name, base_enum in base.enums.items():
+            checks += 1
+            if enum_name not in cand.enums:
+                violations.append(
+                    Violation(
+                        code=GRAPHQL_TYPE_REMOVED,
+                        severity=Severity.BREAKING,
+                        path=f"enum {enum_name}",
+                        message=f"GraphQL enum '{enum_name}' was removed.",
+                    )
+                )
+                continue
+
+            cand_enum = cand.enums[enum_name]
+            for val in base_enum.values:
+                checks += 1
+                if val not in cand_enum.values:
+                    violations.append(
+                        Violation(
+                            code=GRAPHQL_ENUM_VALUE_REMOVED,
+                            severity=Severity.BREAKING,
+                            path=f"{enum_name}.{val}",
+                            message=f"Enum value '{val}' was removed from enum '{enum_name}'.",
+                            suggestion=f"Retain value '{val}' in enum '{enum_name}'.",
                         )
                     )
 

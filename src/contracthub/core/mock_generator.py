@@ -7,8 +7,9 @@ and Apache Avro contracts to assist client testing.
 from typing import Any
 
 from contracthub.core.comparator import SchemaComparator
-from contracthub.core.models import ProtoAST, ProtoMessageAST, SchemaType
+from contracthub.core.models import GraphQLAST, ProtoAST, ProtoMessageAST, SchemaType
 from contracthub.parsers.avro_parser import AvroParser, AvroRecordAST
+from contracthub.parsers.graphql_parser import GraphQLParser
 from contracthub.parsers.json_schema_parser import JsonSchemaParser
 from contracthub.parsers.openapi_parser import OpenApiParser
 from contracthub.parsers.proto_parser import ProtoParser
@@ -41,6 +42,10 @@ class MockGenerator:
         elif detected_type == SchemaType.OPENAPI:
             ast = OpenApiParser.parse_string(schema_content)
             return cls._mock_openapi(ast, target_path=target_entity)
+
+        elif detected_type == SchemaType.GRAPHQL:
+            ast_gql = GraphQLParser.parse_string(schema_content)
+            return cls._mock_graphql(ast_gql, target_type=target_entity)
 
         return {}
 
@@ -172,3 +177,40 @@ class MockGenerator:
             schema_name = next(iter(ast.schemas.keys()))
             return cls._mock_json_schema(ast.schemas[schema_name])
         return {"status": "ok", "message": "Mock response"}
+
+    @classmethod
+    def _mock_graphql(cls, ast: GraphQLAST, target_type: str | None = None) -> dict[str, Any]:
+        """Generate mock JSON matching GraphQL object type fields."""
+        candidate_types = [t for t in ast.types if t not in ("Query", "Mutation", "Subscription")]
+        target = target_type or (
+            candidate_types[0] if candidate_types else next(iter(ast.types), None)
+        )
+
+        if not target or target not in ast.types:
+            return {}
+
+        type_ast = ast.types[target]
+        result: dict[str, Any] = {}
+
+        for f_name, f in type_ast.fields.items():
+            base_t = f.type_name
+            if base_t in ("String", "ID"):
+                val = f"{f_name}_val" if base_t == "String" else "id_101"
+            elif base_t == "Int":
+                val = 42
+            elif base_t == "Float":
+                val = 19.99
+            elif base_t == "Boolean":
+                val = True
+            elif base_t in ast.enums:
+                enum_vals = ast.enums[base_t].values
+                val = enum_vals[0] if enum_vals else "DEFAULT"
+            else:
+                val = {}
+
+            if f.is_list:
+                result[f_name] = [val]
+            else:
+                result[f_name] = val
+
+        return result

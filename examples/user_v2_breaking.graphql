@@ -1,0 +1,21 @@
+enum UserRole {
+  ADMIN
+  MEMBER
+}
+
+type User {
+  id: ID!
+  email: Int
+  role: UserRole!
+}
+
+input CreateUserInput {
+  name: String!
+  email: String
+  role: UserRole
+  inviteCode: String!
+}
+
+type Query {
+  getUser(id: ID!): User
+}

@@ -8,17 +8,17 @@
   <a href="https://github.com/alexandrmotologa/contracthub/actions"><img src="https://github.com/alexandrmotologa/contracthub/actions/workflows/ci.yml/badge.svg" alt="CI Build Status" /></a>
   <img src="https://img.shields.io/badge/Python-3.12%2B-blue.svg" alt="Python 3.12+" />
   <img src="https://img.shields.io/badge/FastAPI-Modern%20Async-009688.svg" alt="FastAPI" />
-  <img src="https://img.shields.io/badge/Schemas-Proto3%20%7C%20Avro%20%7C%20OpenAPI%20%7C%20JSON-orange.svg" alt="Supported Schemas" />
+  <img src="https://img.shields.io/badge/Schemas-Proto3%20%7C%20Avro%20%7C%20OpenAPI%20%7C%20JSON%20%7C%20GraphQL-orange.svg" alt="Supported Schemas" />
   <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License: MIT" />
 </p>
 
 <p align="center">
-  <strong>Schema Registry & Breaking Change Linter for Protobuf, Avro, OpenAPI, and JSON Schema with wire-compatible Confluent Schema Registry endpoints and CI gating.</strong>
+  <strong>Schema Registry & Breaking Change Linter for Protobuf, Avro, OpenAPI, JSON Schema, and GraphQL with wire-compatible Confluent Schema Registry endpoints and CI gating.</strong>
 </p>
 
 ---
 
-ContractHub is a schema registry and breaking change linter for Protocol Buffers (Proto3), Apache Avro (.avsc), OpenAPI 3.x, and JSON Schema. It helps teams maintain data compatibility across event streams and HTTP services by analyzing schema syntax trees, checking semantic rules, and blocking incompatible pull requests in CI pipelines.
+ContractHub is a schema registry and breaking change linter for Protocol Buffers (Proto3), Apache Avro (.avsc), OpenAPI 3.x, JSON Schema, and GraphQL SDL (.graphql / .gql). It helps teams maintain data compatibility across event streams, GraphQL APIs, and HTTP services by analyzing schema syntax trees, checking semantic rules, and blocking incompatible pull requests in CI pipelines.
 
 ContractHub also exposes a wire-compatible API for Confluent Schema Registry clients, so Kafka producers and consumers can register and fetch schemas without code changes.
 
@@ -28,10 +28,10 @@ ContractHub also exposes a wire-compatible API for Confluent Schema Registry cli
 
 ## Features
 
-- AST-level compatibility checks for Proto3, Apache Avro (.avsc), OpenAPI 3.x, and JSON Schema.
+- AST-level compatibility checks for Proto3, Apache Avro (.avsc), OpenAPI 3.x, JSON Schema, and GraphQL SDL.
 - Three compatibility modes: BACKWARD, FORWARD, and FULL.
 - Semantic Versioning (SemVer) recommendation engine (`MAJOR`, `MINOR`, `PATCH`) based on schema diffs.
-- Live Payload Validator checking JSON payloads against Proto, Avro, OpenAPI, and JSON Schema.
+- Live Payload Validator checking JSON payloads against Proto, Avro, OpenAPI, JSON Schema, and GraphQL.
 - Multi-protocol client model code generator (`contracthub codegen`) for TypeScript and Python Pydantic v2.
 - CLI suite (`contracthub diff`, `contracthub check`, `contracthub scan`, `contracthub fix`, `contracthub mock`, `contracthub semver`, `contracthub validate`, `contracthub codegen`).
 - Monorepo scanner with automatic git diff detection and GitHub Actions Markdown summaries.
@@ -82,6 +82,16 @@ ContractHub also exposes a wire-compatible API for Confluent Schema Registry cli
 | `AVRO_FIELD_ADDED_NO_DEFAULT` | BREAKING | New field added without a default value (breaks backward compatibility) |
 | `AVRO_FIELD_REMOVED_NO_DEFAULT` | BREAKING | Existing field removed without a default value (breaks forward compatibility) |
 | `AVRO_TYPE_MUTATED` | BREAKING | Field data type changed incompatibly |
+
+### GraphQL SDL (.graphql / .gql)
+
+| Rule | Severity | Condition |
+| :--- | :--- | :--- |
+| `GRAPHQL_TYPE_REMOVED` | BREAKING | Object type, input, interface, or enum removed from schema |
+| `GRAPHQL_FIELD_REMOVED` | BREAKING | Field deleted from an object type or interface |
+| `GRAPHQL_FIELD_TYPE_CHANGED` | BREAKING | Field return type modified incompatibly |
+| `GRAPHQL_INPUT_FIELD_REQUIRED_ADDED` | BREAKING | New required non-null field added to an input type |
+| `GRAPHQL_ENUM_VALUE_REMOVED` | BREAKING | Enum variant or symbol deleted |
 
 ## Installation
 

@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from contracthub.core.comparator import SchemaComparator
 from contracthub.core.models import ProtoAST, ProtoMessageAST, SchemaType
 from contracthub.parsers.avro_parser import AvroParser, AvroRecordAST
+from contracthub.parsers.graphql_parser import GraphQLParser
 from contracthub.parsers.json_schema_parser import JsonSchemaParser
 from contracthub.parsers.openapi_parser import OpenApiParser
 from contracthub.parsers.proto_parser import ProtoParser
@@ -24,7 +25,7 @@ class ValidationResult(BaseModel):
 
 
 class PayloadValidator:
-    """Validates real or simulated JSON payloads against schema specifications."""
+    """Validates real JSON data structures against any supported contract schema."""
 
     @classmethod
     def validate(
@@ -59,6 +60,9 @@ class PayloadValidator:
 
         elif detected_type == SchemaType.AVRO:
             return cls._validate_avro(schema_content, payload, target_entity)
+
+        elif detected_type == SchemaType.GRAPHQL:
+            return cls._validate_graphql(schema_content, payload, target_entity)
 
         return ValidationResult(
             is_valid=True,
@@ -220,4 +224,67 @@ class PayloadValidator:
             errors=errors,
             schema_type=SchemaType.AVRO,
             target_entity=ast.name,
+        )
+
+    @classmethod
+    def _validate_graphql(
+        cls, schema_content: str, payload: Any, target_entity: str | None
+    ) -> ValidationResult:
+        ast = GraphQLParser.parse_string(schema_content)
+        candidate_types = [t for t in ast.types if t not in ("Query", "Mutation", "Subscription")]
+        type_name = target_entity or (
+            candidate_types[0] if candidate_types else next(iter(ast.types), None)
+        )
+
+        if not type_name or type_name not in ast.types:
+            return ValidationResult(
+                is_valid=False,
+                errors=[f"Target GraphQL type '{type_name or 'None'}' not found in schema"],
+                schema_type=SchemaType.GRAPHQL,
+                target_entity=type_name,
+            )
+
+        type_ast = ast.types[type_name]
+        errors: list[str] = []
+
+        if not isinstance(payload, dict):
+            return ValidationResult(
+                is_valid=False,
+                errors=[f"GraphQL type payload must be a dict, got {type(payload).__name__}"],
+                schema_type=SchemaType.GRAPHQL,
+                target_entity=type_name,
+            )
+
+        for f_name, field in type_ast.fields.items():
+            if f_name not in payload:
+                if field.is_non_null:
+                    errors.append(
+                        f"Missing required non-null GraphQL field '{f_name}' ({field.raw_type})"
+                    )
+                continue
+
+            val = payload[f_name]
+            base_t = field.type_name
+
+            if field.is_list:
+                if not isinstance(val, list):
+                    errors.append(f"Field '{f_name}' expects array list, got {type(val).__name__}")
+                continue
+
+            if base_t in ("String", "ID") and not isinstance(val, str):
+                errors.append(f"Field '{f_name}' expects string, got {type(val).__name__}")
+            elif base_t == "Int" and (not isinstance(val, int) or isinstance(val, bool)):
+                errors.append(f"Field '{f_name}' expects integer, got {type(val).__name__}")
+            elif base_t == "Float" and (not isinstance(val, (float, int)) or isinstance(val, bool)):
+                errors.append(f"Field '{f_name}' expects float, got {type(val).__name__}")
+            elif base_t == "Boolean" and not isinstance(val, bool):
+                errors.append(f"Field '{f_name}' expects boolean, got {type(val).__name__}")
+            elif base_t in ast.enums and val not in ast.enums[base_t].values:
+                errors.append(f"Value '{val}' is not a valid option for enum '{base_t}'")
+
+        return ValidationResult(
+            is_valid=len(errors) == 0,
+            errors=errors,
+            schema_type=SchemaType.GRAPHQL,
+            target_entity=type_name,
         )

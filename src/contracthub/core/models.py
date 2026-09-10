@@ -24,6 +24,7 @@ class SchemaType(str, Enum):
     OPENAPI = "OPENAPI"
     JSON_SCHEMA = "JSON_SCHEMA"
     AVRO = "AVRO"
+    GRAPHQL = "GRAPHQL"
 
 
 class Violation(BaseModel):
@@ -132,3 +133,38 @@ class JsonSchemaAST(BaseModel):
     required: list[str] = Field(default_factory=list)
     additional_properties: bool | None = None
     raw: dict[str, Any] = Field(default_factory=dict)
+
+
+# GraphQL AST models
+class GraphQLFieldAST(BaseModel):
+    name: str
+    type_name: str
+    is_non_null: bool = False
+    is_list: bool = False
+    raw_type: str
+    description: str | None = None
+    args: dict[str, "GraphQLFieldAST"] = Field(default_factory=dict)
+
+
+class GraphQLEnumAST(BaseModel):
+    name: str
+    values: list[str] = Field(default_factory=list)
+    description: str | None = None
+
+
+class GraphQLTypeAST(BaseModel):
+    name: str
+    kind: str = "type"  # type, input, interface, union
+    fields: dict[str, GraphQLFieldAST] = Field(default_factory=dict)
+    interfaces: list[str] = Field(default_factory=list)
+    union_members: list[str] = Field(default_factory=list)
+    description: str | None = None
+
+
+class GraphQLAST(BaseModel):
+    types: dict[str, GraphQLTypeAST] = Field(default_factory=dict)
+    inputs: dict[str, GraphQLTypeAST] = Field(default_factory=dict)
+    enums: dict[str, GraphQLEnumAST] = Field(default_factory=dict)
+    interfaces: dict[str, GraphQLTypeAST] = Field(default_factory=dict)
+    unions: dict[str, GraphQLTypeAST] = Field(default_factory=dict)
+    scalars: list[str] = Field(default_factory=list)

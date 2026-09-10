@@ -30,6 +30,14 @@ AVRO_FIELD_REMOVED_NO_DEFAULT = "AVRO_FIELD_REMOVED_NO_DEFAULT"
 AVRO_FIELD_ADDED_NO_DEFAULT = "AVRO_FIELD_ADDED_NO_DEFAULT"
 AVRO_TYPE_MUTATED = "AVRO_TYPE_MUTATED"
 
+# GraphQL Rules
+GRAPHQL_TYPE_REMOVED = "GRAPHQL_TYPE_REMOVED"
+GRAPHQL_FIELD_REMOVED = "GRAPHQL_FIELD_REMOVED"
+GRAPHQL_FIELD_TYPE_CHANGED = "GRAPHQL_FIELD_TYPE_CHANGED"
+GRAPHQL_INPUT_FIELD_REQUIRED_ADDED = "GRAPHQL_INPUT_FIELD_REQUIRED_ADDED"
+GRAPHQL_ENUM_VALUE_REMOVED = "GRAPHQL_ENUM_VALUE_REMOVED"
+GRAPHQL_FIELD_ADDED = "GRAPHQL_FIELD_ADDED"
+
 
 RULE_DESCRIPTIONS = {
     PROTO_FIELD_REMOVED: "Field was removed without declaring its tag as reserved",
@@ -51,4 +59,10 @@ RULE_DESCRIPTIONS = {
     JSON_SCHEMA_TYPE_NARROWED: "Allowed type spectrum was narrowed",
     JSON_SCHEMA_PROPERTY_REMOVED: "Property was removed from schema with additionalProperties: false",
     JSON_SCHEMA_ADDITIONAL_PROPERTIES_FALSE: "Schema restricted additionalProperties to false",
+    GRAPHQL_TYPE_REMOVED: "Existing GraphQL type or interface was removed",
+    GRAPHQL_FIELD_REMOVED: "Field was removed from GraphQL type or interface",
+    GRAPHQL_FIELD_TYPE_CHANGED: "Field return type or argument type was modified incompatibly",
+    GRAPHQL_INPUT_FIELD_REQUIRED_ADDED: "New non-null (required) field was added to an input type",
+    GRAPHQL_ENUM_VALUE_REMOVED: "Value was removed from GraphQL enum",
+    GRAPHQL_FIELD_ADDED: "New field added to GraphQL type",
 }

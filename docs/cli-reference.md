@@ -148,7 +148,7 @@ contracthub fix --base proto/order_v1.proto --candidate proto/order_v2.proto --w
 
 ### `contracthub mock`
 
-Generates synthetic, deterministic mock JSON payloads according to schema definitions. Supports Proto3, Apache Avro, OpenAPI, and JSON Schema.
+Generates synthetic, deterministic mock JSON payloads according to schema definitions. Supports Proto3, Apache Avro, OpenAPI, JSON Schema, and GraphQL SDL.
 
 ```bash
 contracthub mock --file <FILE> [OPTIONS]
@@ -156,7 +156,7 @@ contracthub mock --file <FILE> [OPTIONS]
 
 #### Options:
 - `--file, -f`: Path to schema file (required).
-- `--message, -m`: Message or record name for files containing multiple schemas.
+- `--message, -m`: Message, record, or GraphQL type name for files containing multiple schemas.
 - `--output, -o`: Output path to write generated JSON payload.
 
 #### Example:
@@ -188,7 +188,7 @@ contracthub semver schemas/user_v1.proto schemas/user_v2.proto --current-version
 
 ### `contracthub validate`
 
-Validates a real JSON data payload against any schema (JSON Schema, OpenAPI component, Protobuf message, or Avro record).
+Validates a real JSON data payload against any schema (JSON Schema, OpenAPI component, Protobuf message, Avro record, or GraphQL type).
 
 ```bash
 contracthub validate --file <FILE> --payload <PAYLOAD> [OPTIONS]

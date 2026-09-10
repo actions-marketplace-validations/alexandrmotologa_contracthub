@@ -4,6 +4,10 @@ ContractHub is a schema registry and breaking change linter for Protocol Buffers
 
 ContractHub also exposes a wire-compatible API for Confluent Schema Registry clients, so Kafka producers and consumers can register and fetch schemas without code changes.
 
+<p align="center">
+  <img src="docs/images/studio_overview.png" alt="ContractHub Web Diff Studio" width="100%">
+</p>
+
 ## Features
 
 - AST-level compatibility checks for Proto3, Apache Avro (.avsc), OpenAPI 3.x, and JSON Schema.
@@ -96,6 +100,10 @@ contracthub diff examples/order_v1.proto examples/order_v2_breaking.proto --mode
 
 The command returns exit code `0` if compatible, or exit code `1` if breaking changes exist.
 
+<p align="center">
+  <img src="docs/images/cli_diff.png" alt="ContractHub CLI Diff Linter" width="95%">
+</p>
+
 ### 2. Run the Registry Server & Web Studio
 
 Start the local registry server:
@@ -137,6 +145,10 @@ You can also output a GitHub Actions job summary:
 ```bash
 contracthub scan --base-ref origin/main --github-summary $GITHUB_STEP_SUMMARY
 ```
+
+<p align="center">
+  <img src="docs/images/cli_scan.png" alt="ContractHub Monorepo Scanner" width="95%">
+</p>
 
 ### 6. Auto-remediate breaking Protobuf changes
 

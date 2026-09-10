@@ -393,13 +393,16 @@ message OrderEvent {
           return;
         }
         listEl.innerHTML = subjects.map(s => `
-          <li class="subject-item" onclick="selectSubject('${s}')">
+          <li class="subject-item" id="subject-${s}" onclick="selectSubject('${s}')">
             <div class="subject-title">
               <span>${s}</span>
               <span class="timeline-badge">Subject</span>
             </div>
           </li>
         `).join('');
+        if (subjects.length > 0) {
+          selectSubject(subjects[0]);
+        }
       } catch (err) {
         listEl.innerHTML = '<li style="padding: 1rem; color: #f85149; font-size: 0.85rem;">Failed to fetch subjects.</li>';
       }
@@ -407,6 +410,9 @@ message OrderEvent {
 
     async function selectSubject(name) {
       document.querySelectorAll('.subject-item').forEach(el => el.classList.remove('active'));
+      const activeEl = document.getElementById('subject-' + name);
+      if (activeEl) activeEl.classList.add('active');
+
       const timelineArea = document.getElementById('timelineArea');
       const timelineItems = document.getElementById('timelineItems');
       const titleEl = document.getElementById('timelineSubjectName');
@@ -476,7 +482,8 @@ message OrderEvent {
           wrapper.innerHTML = '<p style="color: var(--text-muted);">All structural and semantic invariants satisfied.</p>';
         } else {
           statusBanner.className = 'status-banner status-fail';
-          statusBanner.innerHTML = `<span>Failed: ${data.breaking_count} breaking violation(s) detected.</span><span>Mode: ${mode}</span>`;
+          const breakingCount = (data.violations || []).filter(v => v.severity === 'BREAKING').length;
+          statusBanner.innerHTML = `<span>Failed: ${breakingCount} breaking violation(s) detected.</span><span>Mode: ${mode}</span>`;
 
           let rows = data.violations.map(v => `
             <tr>
@@ -510,6 +517,7 @@ message OrderEvent {
 
     loadSample();
     loadSubjects();
+    setTimeout(runCheck, 250);
   </script>
 </body>
 </html>

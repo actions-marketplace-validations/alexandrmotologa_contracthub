@@ -1,0 +1,13 @@
+{
+  "type": "record",
+  "name": "OrderEvent",
+  "namespace": "commerce.orders",
+  "doc": "Compatible Avro schema with optional default currency",
+  "fields": [
+    { "name": "order_id", "type": "string" },
+    { "name": "customer_id", "type": "string" },
+    { "name": "total_amount", "type": "double" },
+    { "name": "created_at_ms", "type": "long" },
+    { "name": "currency", "type": "string", "default": "USD" }
+  ]
+}

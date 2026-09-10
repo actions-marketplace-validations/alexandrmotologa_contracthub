@@ -1,17 +1,21 @@
 # ContractHub
 
-ContractHub is a schema registry and breaking change linter for Protocol Buffers (Proto3), OpenAPI 3.x, and JSON Schema. It helps teams maintain data compatibility across event streams and HTTP services by analyzing schema syntax trees, checking semantic rules, and blocking incompatible pull requests in CI pipelines.
+ContractHub is a schema registry and breaking change linter for Protocol Buffers (Proto3), Apache Avro (.avsc), OpenAPI 3.x, and JSON Schema. It helps teams maintain data compatibility across event streams and HTTP services by analyzing schema syntax trees, checking semantic rules, and blocking incompatible pull requests in CI pipelines.
 
 ContractHub also exposes a wire-compatible API for Confluent Schema Registry clients, so Kafka producers and consumers can register and fetch schemas without code changes.
 
 ## Features
 
-- AST-level compatibility checks for Proto3, OpenAPI 3.x, and JSON Schema.
+- AST-level compatibility checks for Proto3, Apache Avro (.avsc), OpenAPI 3.x, and JSON Schema.
 - Three compatibility modes: BACKWARD, FORWARD, and FULL.
-- CLI tool (`contracthub diff`, `contracthub check`) designed for developer terminals and CI runners.
+- CLI suite (`contracthub diff`, `contracthub check`, `contracthub scan`, `contracthub fix`, `contracthub mock`).
+- Monorepo scanner with automatic git diff detection and GitHub Actions Markdown summaries.
+- Auto-remediation engine to automatically preserve deleted Protobuf tags and names with `reserved`.
+- Synthetic mock data generator producing realistic JSON payloads from schemas.
+- Outbound Webhooks with HMAC-SHA256 signatures for schema registration and compatibility alerts.
 - Confluent Schema Registry wire-compatible HTTP endpoints (`/subjects`, `/schemas/ids/{id}`, `/compatibility/subjects/{subject}/versions/{version}`).
-- Built-in Web Studio (`/studio`) to inspect schemas and test candidate changes in the browser.
-- Standalone GitHub Action (`alexandrmotologa/contracthub@v1`) to guard repositories against breaking contract edits.
+- Built-in Web Studio (`/studio`) with subject explorer, version history viewer, and candidate diff testing.
+- Standalone GitHub Action (`alexandrmotologa/contracthub@v1`) with monorepo scanning support.
 - Local SQLite storage by default, with support for PostgreSQL.
 
 ## Compatibility Rules
@@ -45,6 +49,14 @@ ContractHub also exposes a wire-compatible API for Confluent Schema Registry cli
 | `JSON_SCHEMA_REQUIRED_ADDED` | BREAKING | New field added to `required` array in candidate schema |
 | `JSON_SCHEMA_TYPE_NARROWED` | BREAKING | Allowed type set reduced (for example, `["string", "null"]` to `string`) |
 | `JSON_SCHEMA_PROPERTY_REMOVED` | BREAKING | Property removed when `additionalProperties: false` is configured |
+
+### Apache Avro (.avsc)
+
+| Rule | Severity | Condition |
+| :--- | :--- | :--- |
+| `AVRO_FIELD_ADDED_NO_DEFAULT` | BREAKING | New field added without a default value (breaks backward compatibility) |
+| `AVRO_FIELD_REMOVED_NO_DEFAULT` | BREAKING | Existing field removed without a default value (breaks forward compatibility) |
+| `AVRO_TYPE_MUTATED` | BREAKING | Field data type changed incompatibly |
 
 ## Installation
 
@@ -112,30 +124,92 @@ Register an approved schema into the registry:
 contracthub register --subject order-events --file schemas/order.proto --url http://localhost:8000
 ```
 
+### 5. Scan a Git monorepo for changed schemas
+
+Scan all modified schemas between your branch and a base reference:
+
+```bash
+contracthub scan --base-ref origin/main --mode BACKWARD
+```
+
+You can also output a GitHub Actions job summary:
+
+```bash
+contracthub scan --base-ref origin/main --github-summary $GITHUB_STEP_SUMMARY
+```
+
+### 6. Auto-remediate breaking Protobuf changes
+
+Automatically preserve removed tags and names by appending `reserved` directives:
+
+```bash
+# Preview modifications
+contracthub fix --base examples/order_v1.proto --candidate examples/order_v2_breaking.proto
+
+# Apply in-place to candidate file
+contracthub fix --base examples/order_v1.proto --candidate examples/order_v2_breaking.proto --write
+```
+
+### 7. Generate synthetic mock payloads
+
+Produce mock JSON data directly from a schema file or the REST API:
+
+```bash
+contracthub mock --file examples/order_v1.proto --message Order --output mock_order.json
+```
+
 ## GitHub Action Usage
 
-Add ContractHub to your pull request workflow (`.github/workflows/contract-lint.yml`):
+ContractHub can check specific schema files or scan an entire monorepo automatically.
+
+### Monorepo automatic scan
 
 ```yaml
-name: Schema Lint
+name: Contract Linter
 
 on:
   pull_request:
-    paths:
-      - 'proto/**'
-      - 'openapi/**'
+    branches: [main]
 
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: alexandrmotologa/contracthub@v1
+        with:
+          base-ref: 'origin/main'
+          mode: 'BACKWARD'
+```
+
+### Targeted single-file check
+
+```yaml
       - uses: alexandrmotologa/contracthub@v1
         with:
           file: 'proto/order.proto'
           base-ref: 'origin/main'
-          mode: 'BACKWARD'
+          mode: 'FULL'
 ```
+
+## Outbound Webhooks
+
+ContractHub sends signed HTTP POST payloads whenever schemas are registered or rejected.
+
+Register a webhook endpoint:
+
+```bash
+curl -X POST http://localhost:8000/v1/webhooks \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://api.example.com/events", "secret": "webhook-secret-token"}'
+```
+
+Every delivery includes the following headers:
+- `X-ContractHub-Event`: Event identifier (`VERSION_REGISTERED` or `COMPATIBILITY_REJECTED`)
+- `X-ContractHub-Signature`: HMAC-SHA256 hex signature computed with your secret
+- `X-ContractHub-Delivery`: Unique UUID for the delivery attempt
 
 ## Confluent Schema Registry Compatibility
 

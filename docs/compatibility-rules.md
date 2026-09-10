@@ -74,3 +74,18 @@ JSON Schema rules govern document payloads used across webhook payloads and NoSQ
 
 3. `JSON_SCHEMA_PROPERTY_REMOVED`:
    - Removing a defined property from a schema with `additionalProperties: false`.
+
+## Apache Avro (.avsc) Specification
+
+Apache Avro relies on schema resolution between the reader schema and writer schema. Default values are crucial for bidirectional schema evolution.
+
+### Breaking Rules
+
+1. `AVRO_FIELD_ADDED_NO_DEFAULT`:
+   - Adding a field without a `default` property in BACKWARD or FULL mode. Readers using the new schema cannot decode records written with older schemas because the missing field has no fallback value.
+
+2. `AVRO_FIELD_REMOVED_NO_DEFAULT`:
+   - Removing a field without a default value in FORWARD or FULL mode. Old readers expecting the field cannot process messages produced by the new schema.
+
+3. `AVRO_TYPE_MUTATED`:
+   - Changing the data type of an existing field in an incompatible manner (for example, mutating `string` to `long` or removing an element from a type union). Avro only permits promotions specified by the Avro specification (such as `int` to `long`, `float`, or `double`).

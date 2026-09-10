@@ -80,6 +80,70 @@ Response:
 }
 ```
 
+### 5. Generate Synthetic Mock Data
+
+`POST /v1/mock`
+
+Generates mock payload data conforming to the supplied schema definition.
+
+Request body:
+```json
+{
+  "schema": "syntax = \"proto3\";\nmessage Order { string order_id = 1; double amount = 2; }",
+  "schemaType": "PROTOBUF",
+  "rootName": "Order"
+}
+```
+
+Response:
+```json
+{
+  "mockData": {
+    "order_id": "sample_order_id",
+    "amount": 10.5
+  }
+}
+```
+
+### 6. Webhooks Management
+
+#### Register a Webhook
+
+`POST /v1/webhooks`
+
+Request body:
+```json
+{
+  "url": "https://api.example.com/webhooks/contracts",
+  "secret": "signing-secret-key",
+  "events": "all"
+}
+```
+
+Response:
+```json
+{
+  "id": 1,
+  "url": "https://api.example.com/webhooks/contracts",
+  "secret": "signing-secret-key",
+  "events": "all",
+  "active": true,
+  "createdAt": "2026-09-10T14:45:00.000000"
+}
+```
+
+#### List Webhooks
+
+`GET /v1/webhooks`
+
+Returns array of active registered webhooks.
+
+#### Delete a Webhook
+
+`DELETE /v1/webhooks/{id}`
+
+Removes a registered webhook subscription.
+
 ---
 
 ## Confluent Compatibility Layer

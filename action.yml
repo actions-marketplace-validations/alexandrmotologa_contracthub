@@ -4,8 +4,8 @@ author: 'Alexandr Motologa'
 
 inputs:
   file:
-    description: 'Path to the schema file in the repository'
-    required: true
+    description: 'Path to a specific schema file in the repository (leave empty to scan all modified schemas)'
+    required: false
   base-file:
     description: 'Path to the base schema file to compare against (optional if base-ref is used)'
     required: false
@@ -35,9 +35,14 @@ runs:
     - name: Run Schema Compatibility Check
       shell: bash
       run: |
-        if [ -n "${{ inputs.base-file }}" ]; then
-          contracthub diff "${{ inputs.base-file }}" "${{ inputs.file }}" --mode "${{ inputs.mode }}"
+        if [ -n "${{ inputs.file }}" ]; then
+          if [ -n "${{ inputs.base-file }}" ]; then
+            contracthub diff "${{ inputs.base-file }}" "${{ inputs.file }}" --mode "${{ inputs.mode }}"
+          else
+            git show "${{ inputs.base-ref }}:${{ inputs.file }}" > /tmp/base_schema
+            contracthub diff /tmp/base_schema "${{ inputs.file }}" --mode "${{ inputs.mode }}"
+          fi
         else
-          git show "${{ inputs.base-ref }}:${{ inputs.file }}" > /tmp/base_schema
-          contracthub diff /tmp/base_schema "${{ inputs.file }}" --mode "${{ inputs.mode }}"
+          # Automatic Monorepo Scan Mode
+          contracthub scan --against "${{ inputs.base-ref }}" --mode "${{ inputs.mode }}" --format github --output "${GITHUB_STEP_SUMMARY:-/dev/stdout}"
         fi

@@ -1,0 +1,13 @@
+{
+  "type": "record",
+  "name": "OrderEvent",
+  "namespace": "commerce.orders",
+  "doc": "Breaking Avro schema mutation",
+  "fields": [
+    { "name": "order_id", "type": "string" },
+    { "name": "customer_id", "type": "string" },
+    { "name": "total_amount", "type": "boolean" },
+    { "name": "created_at_ms", "type": "long" },
+    { "name": "tax_id", "type": "string" }
+  ]
+}

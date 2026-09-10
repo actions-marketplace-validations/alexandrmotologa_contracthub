@@ -4,6 +4,7 @@ from collections.abc import Generator
 from datetime import UTC, datetime
 
 from sqlalchemy import (
+    Boolean,
     Column,
     DateTime,
     ForeignKey,
@@ -61,6 +62,21 @@ class SchemaVersionModel(Base):
 
     __table_args__ = (
         UniqueConstraint("subject_id", "version", name="uq_subject_version"),
+    )
+
+
+class WebhookModel(Base):
+    __tablename__ = "webhooks"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    url = Column(String(512), nullable=False)
+    secret = Column(String(128), nullable=True)
+    events = Column(String(255), default="VERSION_REGISTERED,COMPATIBILITY_REJECTED", nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
     )
 
 

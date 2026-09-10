@@ -95,3 +95,71 @@ contracthub serve [OPTIONS]
 - `--port, -p`: Bind port. Defaults to `8000`.
 - `--reload`: Enable auto-reload for local development.
 - `--db`: SQLite database path or PostgreSQL connection URL.
+
+---
+
+### `contracthub scan`
+
+Scans a git repository for modified schema files against a base git reference, comparing each file AST.
+
+```bash
+contracthub scan [OPTIONS]
+```
+
+#### Options:
+- `--repo-path, -r`: Path to git repository root. Defaults to `.`.
+- `--base-ref, -b`: Base git reference or commit to compare against. Defaults to `origin/main`.
+- `--mode, -m`: Compatibility mode (`BACKWARD`, `FORWARD`, `FULL`). Defaults to `FULL`.
+- `--format, -f`: Output format (`table`, `json`). Defaults to `table`.
+- `--github-summary`: Path to write GitHub Actions Step Summary markdown.
+- `--strict / --no-strict`: Treat warnings as breaking errors. Defaults to `false`.
+
+#### Example:
+```bash
+contracthub scan --base-ref origin/main --mode BACKWARD --github-summary $GITHUB_STEP_SUMMARY
+```
+
+---
+
+### `contracthub fix`
+
+Analyzes breaking changes between two schema files and automatically applies safe remediations (for instance, declaring removed tags and names as `reserved` in Protobuf).
+
+```bash
+contracthub fix --base <BASE_FILE> --candidate <CANDIDATE_FILE> [OPTIONS]
+```
+
+#### Options:
+- `--base, -b`: Path to base schema file (required).
+- `--candidate, -c`: Path to candidate schema file (required).
+- `--write, -w`: Write remediated contents directly to the candidate file.
+- `--output, -o`: Output path for remediated schema file.
+
+#### Example:
+```bash
+# Preview remediation in terminal
+contracthub fix --base proto/order_v1.proto --candidate proto/order_v2.proto
+
+# Apply fixes directly
+contracthub fix --base proto/order_v1.proto --candidate proto/order_v2.proto --write
+```
+
+---
+
+### `contracthub mock`
+
+Generates synthetic, deterministic mock JSON payloads according to schema definitions. Supports Proto3, Apache Avro, OpenAPI, and JSON Schema.
+
+```bash
+contracthub mock --file <FILE> [OPTIONS]
+```
+
+#### Options:
+- `--file, -f`: Path to schema file (required).
+- `--message, -m`: Message or record name for files containing multiple schemas.
+- `--output, -o`: Output path to write generated JSON payload.
+
+#### Example:
+```bash
+contracthub mock --file proto/payment.proto --message PaymentRequest --output mock_payment.json
+```

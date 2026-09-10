@@ -1,5 +1,6 @@
 """ContractHub Command Line Interface."""
 
+import json
 from pathlib import Path
 
 import httpx
@@ -10,8 +11,16 @@ from rich.console import Console
 from contracthub import __version__
 from contracthub.config import settings
 from contracthub.core.comparator import SchemaComparator
+from contracthub.core.mock_generator import MockGenerator
 from contracthub.core.models import CompatibilityMode
-from contracthub.tui.diff_viewer import render_diff_table, render_json_result
+from contracthub.core.remediation import AutoRemediator
+from contracthub.core.scanner import GitScanner
+from contracthub.tui.diff_viewer import (
+    render_diff_table,
+    render_github_summary,
+    render_json_result,
+    render_scan_table,
+)
 
 app = typer.Typer(
     name="contracthub",
@@ -90,6 +99,145 @@ def diff(
 
     if not result.is_compatible:
         raise typer.Exit(code=1)
+
+
+@app.command()
+def scan(
+    against: str = typer.Option(
+        "origin/main",
+        "--against",
+        "-a",
+        help="Git branch or reference to compare working tree against.",
+    ),
+    mode: CompatibilityMode = typer.Option(
+        CompatibilityMode.FULL,
+        "--mode",
+        "-m",
+        help="Compatibility evaluation mode.",
+    ),
+    format: str = typer.Option(
+        "table",
+        "--format",
+        "-f",
+        help="Output format: 'table', 'json', or 'github'.",
+    ),
+    output: Path | None = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Optional file path to write summary report to.",
+    ),
+):
+    """Scan all modified schema files in the Git repository against a base branch."""
+    summary = GitScanner.scan(target_ref=against, mode=mode)
+
+    if format.lower() == "json":
+        data = summary.model_dump(mode="json")
+        json_str = json.dumps(data, indent=2)
+        if output:
+            output.write_text(json_str, encoding="utf-8")
+        else:
+            console.print(json_str)
+    elif format.lower() == "github":
+        md = render_github_summary(summary)
+        if output:
+            output.write_text(md, encoding="utf-8")
+        else:
+            console.print(md)
+    else:
+        render_scan_table(summary)
+        if output:
+            md = render_github_summary(summary)
+            output.write_text(md, encoding="utf-8")
+
+    if not summary.is_compatible:
+        raise typer.Exit(code=1)
+
+
+@app.command()
+def fix(
+    candidate_file: Path = typer.Argument(..., help="Path to candidate schema file to fix."),
+    base_file: Path = typer.Option(..., "--base", "-b", help="Path to base (old) schema file."),
+    in_place: bool = typer.Option(
+        False,
+        "--in-place",
+        "-i",
+        help="Overwrite candidate file with fixed content.",
+    ),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help="Preview synthesized fixes without writing changes.",
+    ),
+):
+    """Automatically patch breaking changes (e.g. inject reserved tags) into candidate schemas."""
+    if not base_file.exists():
+        console.print(f"[bold red]Error:[/bold red] Base file '{base_file}' does not exist.")
+        raise typer.Exit(code=2)
+    if not candidate_file.exists():
+        console.print(f"[bold red]Error:[/bold red] Candidate file '{candidate_file}' does not exist.")
+        raise typer.Exit(code=2)
+
+    base_content = base_file.read_text(encoding="utf-8")
+    candidate_content = candidate_file.read_text(encoding="utf-8")
+
+    result = AutoRemediator.fix_proto(
+        base_content=base_content,
+        candidate_content=candidate_content,
+    )
+
+    if not result.was_modified:
+        console.print("[green]No auto-remediable breaking changes found (schema is either compatible or contains non-trivial mutations).[/green]")
+        raise typer.Exit(code=0)
+
+    console.print(f"[bold cyan]Identified {len(result.actions)} auto-remediation fix(es):[/bold cyan]")
+    for act in result.actions:
+        console.print(f"  - [yellow]{act.target}[/yellow]: {act.description}")
+        console.print(f"    [dim]{act.patch_snippet}[/dim]")
+
+    if dry_run or not in_place:
+        console.print("\n[yellow]Run with '--in-place' (-i) to apply these fixes directly to the candidate file.[/yellow]")
+    else:
+        candidate_file.write_text(result.fixed_content, encoding="utf-8")
+        console.print(f"\n[bold green]Successfully applied fixes to {candidate_file}![/bold green]")
+
+
+@app.command()
+def mock(
+    file: Path = typer.Option(..., "--file", "-f", help="Schema file to generate mock data from."),
+    message: str | None = typer.Option(
+        None,
+        "--message",
+        "-m",
+        help="Target message or entity name for Proto/OpenAPI.",
+    ),
+    output: Path | None = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Optional output JSON file path.",
+    ),
+):
+    """Generate synthetic JSON mock data payloads conforming to a schema definition."""
+    if not file.exists():
+        console.print(f"[bold red]Error:[/bold red] File '{file}' does not exist.")
+        raise typer.Exit(code=2)
+
+    content = file.read_text(encoding="utf-8")
+    schema_type = SchemaComparator.detect_schema_type(content, file.name)
+
+    mock_data = MockGenerator.generate(
+        schema_content=content,
+        schema_type=schema_type,
+        target_entity=message,
+    )
+
+    json_str = json.dumps(mock_data, indent=2)
+    if output:
+        output.write_text(json_str, encoding="utf-8")
+        console.print(f"[bold green]Saved mock data to {output}[/bold green]")
+    else:
+        console.print(json_str)
 
 
 @app.command()

@@ -28,18 +28,23 @@ def get_studio_html() -> str:
       background: var(--bg);
       color: var(--text);
       line-height: 1.5;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
     }
     header {
       background: var(--card-bg);
       border-bottom: 1px solid var(--border);
-      padding: 1rem 2rem;
+      padding: 0.75rem 1.5rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      flex-shrink: 0;
     }
     .brand {
       font-weight: 700;
-      font-size: 1.25rem;
+      font-size: 1.15rem;
       color: #fff;
       display: flex;
       align-items: center;
@@ -49,24 +54,95 @@ def get_studio_html() -> str:
       background: rgba(88, 166, 255, 0.15);
       color: var(--accent);
       border: 1px solid rgba(88, 166, 255, 0.3);
-      padding: 0.2rem 0.5rem;
+      padding: 0.15rem 0.5rem;
       border-radius: 999px;
       font-size: 0.75rem;
       font-weight: 600;
     }
+    .layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+    /* Left Sidebar: Subjects & Timeline */
+    aside {
+      width: 320px;
+      background: #090d13;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    .sidebar-header {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .subject-list {
+      flex: 1;
+      overflow-y: auto;
+      list-style: none;
+    }
+    .subject-item {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid rgba(48, 54, 61, 0.5);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .subject-item:hover, .subject-item.active {
+      background: #161b22;
+    }
+    .subject-title {
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: #e6edf3;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .timeline-container {
+      padding: 0.75rem 1rem;
+      background: #161b22;
+      border-top: 1px solid var(--border);
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    .timeline-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.4rem 0;
+      font-size: 0.8rem;
+    }
+    .timeline-badge {
+      background: #21262d;
+      border: 1px solid var(--border);
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+    /* Main Diff Area */
     main {
-      max-width: 1400px;
-      margin: 2rem auto;
-      padding: 0 1.5rem;
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
     }
     .controls {
       background: var(--card-bg);
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 1rem 1.5rem;
-      margin-bottom: 1.5rem;
+      padding: 0.75rem 1.25rem;
       display: flex;
-      gap: 1.5rem;
+      gap: 1.25rem;
       align-items: center;
       flex-wrap: wrap;
     }
@@ -75,17 +151,16 @@ def get_studio_html() -> str:
       align-items: center;
       gap: 0.5rem;
     }
-    label { font-size: 0.875rem; color: var(--text-muted); font-weight: 500; }
+    label { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
     select, button {
       background: #21262d;
       border: 1px solid var(--border);
       color: var(--text);
-      padding: 0.5rem 0.75rem;
+      padding: 0.4rem 0.75rem;
       border-radius: 6px;
-      font-size: 0.875rem;
+      font-size: 0.85rem;
       outline: none;
     }
-    select:focus { border-color: var(--accent); }
     button.primary {
       background: #238636;
       border-color: rgba(240, 246, 252, 0.1);
@@ -93,17 +168,19 @@ def get_studio_html() -> str:
       font-weight: 600;
       cursor: pointer;
       margin-left: auto;
-      transition: background 0.15s ease;
     }
     button.primary:hover { background: #2ea043; }
+    button.small {
+      padding: 0.2rem 0.5rem;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 1.5rem;
-      margin-bottom: 1.5rem;
-    }
-    @media (max-width: 900px) {
-      .grid { grid-template-columns: 1fr; }
+      gap: 1rem;
+      flex: 1;
+      min-height: 380px;
     }
     .editor-card {
       background: var(--card-bg);
@@ -116,8 +193,8 @@ def get_studio_html() -> str:
     .editor-header {
       background: rgba(255, 255, 255, 0.02);
       border-bottom: 1px solid var(--border);
-      padding: 0.75rem 1rem;
-      font-size: 0.875rem;
+      padding: 0.5rem 1rem;
+      font-size: 0.8rem;
       font-weight: 600;
       display: flex;
       justify-content: space-between;
@@ -125,31 +202,31 @@ def get_studio_html() -> str:
     }
     textarea {
       width: 100%;
-      height: 380px;
+      flex: 1;
       background: #090d13;
       border: none;
       color: #e6edf3;
-      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-      font-size: 0.875rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.85rem;
       padding: 1rem;
-      resize: vertical;
+      resize: none;
       outline: none;
     }
     .results-card {
       background: var(--card-bg);
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 1.5rem;
-      margin-top: 1.5rem;
+      padding: 1rem 1.25rem;
     }
     .status-banner {
-      padding: 1rem 1.25rem;
+      padding: 0.75rem 1rem;
       border-radius: 6px;
-      margin-bottom: 1.25rem;
+      margin-bottom: 1rem;
       font-weight: 600;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      font-size: 0.875rem;
     }
     .status-pass {
       background: var(--green-bg);
@@ -161,21 +238,9 @@ def get_studio_html() -> str:
       border: 1px solid rgba(218, 54, 51, 0.4);
       color: #f85149;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.875rem;
-    }
-    th, td {
-      text-align: left;
-      padding: 0.75rem 1rem;
-      border-bottom: 1px solid var(--border);
-    }
-    th {
-      background: rgba(255, 255, 255, 0.02);
-      color: var(--text-muted);
-      font-weight: 600;
-    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.825rem; }
+    th, td { text-align: left; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border); }
+    th { background: rgba(255, 255, 255, 0.02); color: var(--text-muted); font-weight: 600; }
     .tag-breaking {
       background: rgba(218, 54, 51, 0.2);
       color: #f85149;
@@ -184,68 +249,86 @@ def get_studio_html() -> str:
       font-size: 0.75rem;
       font-weight: 600;
     }
-    .code-val {
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      color: var(--accent);
-    }
+    .code-val { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--accent); }
   </style>
 </head>
 <body>
   <header>
     <div class="brand">
       ContractHub Studio
-      <span class="badge">Universal Schema Linter</span>
+      <span class="badge">Universal Schema Governance</span>
     </div>
     <div style="font-size: 0.85rem; color: var(--text-muted);">
-      Connected to Local Registry: <code>/v1</code>
+      Connected API: <code>/v1</code> & <code>Confluent Wire</code>
     </div>
   </header>
 
-  <main>
-    <div class="controls">
-      <div class="field-group">
-        <label for="schemaType">Format:</label>
-        <select id="schemaType">
-          <option value="PROTOBUF">Protobuf (Proto3)</option>
-          <option value="OPENAPI">OpenAPI 3.x</option>
-          <option value="JSON_SCHEMA">JSON Schema</option>
-        </select>
+  <div class="layout">
+    <!-- Left Subject Explorer Sidebar -->
+    <aside>
+      <div class="sidebar-header">
+        <span>REGISTERED SUBJECTS</span>
+        <button type="button" class="small" onclick="loadSubjects()">Refresh</button>
       </div>
-
-      <div class="field-group">
-        <label for="compatMode">Mode:</label>
-        <select id="compatMode">
-          <option value="FULL">FULL (Backward + Forward)</option>
-          <option value="BACKWARD">BACKWARD</option>
-          <option value="FORWARD">FORWARD</option>
-        </select>
-      </div>
-
-      <button type="button" onclick="loadSample()">Load Sample</button>
-      <button type="button" class="primary" onclick="runCheck()">Run Compatibility Check</button>
-    </div>
-
-    <div class="grid">
-      <div class="editor-card">
-        <div class="editor-header">
-          <span>Base Schema (Old Version / V1)</span>
+      <ul id="subjectsList" class="subject-list">
+        <li style="padding: 1rem; color: var(--text-muted); font-size: 0.85rem;">Loading subjects...</li>
+      </ul>
+      <div id="timelineArea" style="display: none;">
+        <div class="sidebar-header">
+          <span id="timelineSubjectName">VERSIONS</span>
         </div>
-        <textarea id="baseSchema" spellcheck="false" placeholder="Paste base schema here..."></textarea>
+        <div id="timelineItems" class="timeline-container"></div>
       </div>
+    </aside>
 
-      <div class="editor-card">
-        <div class="editor-header">
-          <span>Candidate Schema (New Version / V2)</span>
+    <!-- Main Diff & Verification Canvas -->
+    <main>
+      <div class="controls">
+        <div class="field-group">
+          <label for="schemaType">Format:</label>
+          <select id="schemaType">
+            <option value="PROTOBUF">Protobuf (Proto3)</option>
+            <option value="AVRO">Apache Avro (.avsc)</option>
+            <option value="OPENAPI">OpenAPI 3.x</option>
+            <option value="JSON_SCHEMA">JSON Schema</option>
+          </select>
         </div>
-        <textarea id="candidateSchema" spellcheck="false" placeholder="Paste candidate schema here..."></textarea>
-      </div>
-    </div>
 
-    <div id="resultsArea" class="results-card" style="display: none;">
-      <div id="statusBanner" class="status-banner"></div>
-      <div id="violationsTableWrapper"></div>
-    </div>
-  </main>
+        <div class="field-group">
+          <label for="compatMode">Mode:</label>
+          <select id="compatMode">
+            <option value="FULL">FULL (Backward + Forward)</option>
+            <option value="BACKWARD">BACKWARD</option>
+            <option value="FORWARD">FORWARD</option>
+          </select>
+        </div>
+
+        <button type="button" onclick="loadSample()">Load Sample</button>
+        <button type="button" class="primary" onclick="runCheck()">Run Compatibility Check</button>
+      </div>
+
+      <div class="grid">
+        <div class="editor-card">
+          <div class="editor-header">
+            <span>Base Schema (Old Version / V1)</span>
+          </div>
+          <textarea id="baseSchema" spellcheck="false" placeholder="Paste base schema here..."></textarea>
+        </div>
+
+        <div class="editor-card">
+          <div class="editor-header">
+            <span>Candidate Schema (New Version / V2)</span>
+          </div>
+          <textarea id="candidateSchema" spellcheck="false" placeholder="Paste candidate schema here..."></textarea>
+        </div>
+      </div>
+
+      <div id="resultsArea" class="results-card" style="display: none;">
+        <div id="statusBanner" class="status-banner"></div>
+        <div id="violationsTableWrapper"></div>
+      </div>
+    </main>
+  </div>
 
   <script>
     const sampleProtoV1 = `syntax = "proto3";
@@ -298,6 +381,68 @@ message OrderEvent {
       document.getElementById('schemaType').value = 'PROTOBUF';
       document.getElementById('baseSchema').value = sampleProtoV1;
       document.getElementById('candidateSchema').value = sampleProtoV2Breaking;
+    }
+
+    async function loadSubjects() {
+      const listEl = document.getElementById('subjectsList');
+      try {
+        const resp = await fetch('/v1/subjects');
+        const subjects = await resp.json();
+        if (subjects.length === 0) {
+          listEl.innerHTML = '<li style="padding: 1rem; color: var(--text-muted); font-size: 0.85rem;">No subjects registered yet.</li>';
+          return;
+        }
+        listEl.innerHTML = subjects.map(s => `
+          <li class="subject-item" onclick="selectSubject('${s}')">
+            <div class="subject-title">
+              <span>${s}</span>
+              <span class="timeline-badge">Subject</span>
+            </div>
+          </li>
+        `).join('');
+      } catch (err) {
+        listEl.innerHTML = '<li style="padding: 1rem; color: #f85149; font-size: 0.85rem;">Failed to fetch subjects.</li>';
+      }
+    }
+
+    async function selectSubject(name) {
+      document.querySelectorAll('.subject-item').forEach(el => el.classList.remove('active'));
+      const timelineArea = document.getElementById('timelineArea');
+      const timelineItems = document.getElementById('timelineItems');
+      const titleEl = document.getElementById('timelineSubjectName');
+
+      titleEl.textContent = name.toUpperCase() + ' VERSIONS';
+      timelineArea.style.display = 'block';
+
+      try {
+        const resp = await fetch(`/v1/subjects/${name}/versions`);
+        const versions = await resp.json();
+        timelineItems.innerHTML = versions.map(v => `
+          <div class="timeline-item">
+            <span class="timeline-badge">V${v}</span>
+            <div style="display: flex; gap: 0.25rem;">
+              <button class="small" onclick="loadVersionInto('${name}', ${v}, 'base')">Base</button>
+              <button class="small" onclick="loadVersionInto('${name}', ${v}, 'candidate')">Candidate</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        timelineItems.innerHTML = '<p style="color: #f85149; font-size: 0.75rem;">Failed to fetch versions.</p>';
+      }
+    }
+
+    async function loadVersionInto(subject, version, target) {
+      try {
+        const resp = await fetch(`/v1/subjects/${subject}/versions/${version}`);
+        const data = await resp.json();
+        const textarea = target === 'base' ? document.getElementById('baseSchema') : document.getElementById('candidateSchema');
+        textarea.value = data.schema;
+        if (data.schemaType) {
+          document.getElementById('schemaType').value = data.schemaType;
+        }
+      } catch (err) {
+        alert('Failed to load version: ' + err.message);
+      }
     }
 
     async function runCheck() {
@@ -363,8 +508,8 @@ message OrderEvent {
       }
     }
 
-    // Auto-load sample on first load
     loadSample();
+    loadSubjects();
   </script>
 </body>
 </html>

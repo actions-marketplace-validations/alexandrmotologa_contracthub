@@ -16,6 +16,9 @@ from contracthub.core.models import (
     Violation,
 )
 from contracthub.core.rules import (
+    AVRO_FIELD_ADDED_NO_DEFAULT,
+    AVRO_FIELD_REMOVED_NO_DEFAULT,
+    AVRO_TYPE_MUTATED,
     JSON_SCHEMA_PROPERTY_REMOVED,
     JSON_SCHEMA_REQUIRED_ADDED,
     JSON_SCHEMA_TYPE_NARROWED,
@@ -34,6 +37,7 @@ from contracthub.core.rules import (
     REST_REQUIRED_PARAM_ADDED,
     REST_STATUS_MUTATED,
 )
+from contracthub.parsers.avro_parser import AvroParser, AvroRecordAST
 from contracthub.parsers.json_schema_parser import JsonSchemaParser
 from contracthub.parsers.openapi_parser import OpenApiParser
 from contracthub.parsers.proto_parser import ProtoParser
@@ -68,6 +72,11 @@ class SchemaComparator:
             candidate_ast = JsonSchemaParser.parse_string(candidate_content)
             return cls.compare_json_schema(base_ast, candidate_ast, mode)
 
+        elif schema_type == SchemaType.AVRO:
+            base_ast = AvroParser.parse_string(base_content)
+            candidate_ast = AvroParser.parse_string(candidate_content)
+            return cls.compare_avro(base_ast, candidate_ast, mode)
+
         else:
             raise ValueError(f"Unsupported schema type: {schema_type}")
 
@@ -76,12 +85,16 @@ class SchemaComparator:
         if filename:
             if filename.endswith(".proto"):
                 return SchemaType.PROTOBUF
+            if filename.endswith(".avsc"):
+                return SchemaType.AVRO
             if "openapi" in filename.lower() or "swagger" in filename.lower():
                 return SchemaType.OPENAPI
 
         trimmed = content.strip()
         if trimmed.startswith("syntax =") or 'syntax="' in trimmed or "syntax = " in trimmed:
             return SchemaType.PROTOBUF
+        if '"type": "record"' in trimmed or '"type":"record"' in trimmed or "'type': 'record'" in trimmed:
+            return SchemaType.AVRO
         if '"openapi":' in trimmed or "'openapi':" in trimmed or "openapi:" in trimmed:
             return SchemaType.OPENAPI
         if "$schema" in trimmed or '"properties":' in trimmed or "'properties':" in trimmed:
@@ -454,6 +467,65 @@ class SchemaComparator:
                                 f"Property '{prop_name}' was removed and candidate schema "
                                 f"disallows additional properties."
                             ),
+                        )
+                    )
+
+        is_compatible = len([v for v in violations if v.severity == Severity.BREAKING]) == 0
+        return CompatibilityResult(
+            is_compatible=is_compatible,
+            mode=mode,
+            violations=violations,
+            total_checks=checks,
+        )
+
+    @classmethod
+    def compare_avro(
+        cls,
+        base: AvroRecordAST,
+        cand: AvroRecordAST,
+        mode: CompatibilityMode = CompatibilityMode.FULL,
+    ) -> CompatibilityResult:
+        violations: list[Violation] = []
+        checks = 0
+
+        # Check fields in base
+        for f_name, base_field in base.fields.items():
+            checks += 1
+            if f_name not in cand.fields:
+                if mode in (CompatibilityMode.FORWARD, CompatibilityMode.FULL) and not base_field.has_default:
+                    violations.append(
+                        Violation(
+                            code=AVRO_FIELD_REMOVED_NO_DEFAULT,
+                            severity=Severity.BREAKING,
+                            path=f"{base.name}.{f_name}",
+                            message=f"Field '{f_name}' removed from record '{base.name}' without a default value in base schema.",
+                            suggestion=f"Provide a default value for '{f_name}' before removal.",
+                        )
+                    )
+            else:
+                cand_field = cand.fields[f_name]
+                if base_field.type != cand_field.type:
+                    violations.append(
+                        Violation(
+                            code=AVRO_TYPE_MUTATED,
+                            severity=Severity.BREAKING,
+                            path=f"{base.name}.{f_name}",
+                            message=f"Field '{f_name}' type changed from '{base_field.type}' to '{cand_field.type}'.",
+                        )
+                    )
+
+        # Check fields in candidate
+        for c_name, cand_field in cand.fields.items():
+            if c_name not in base.fields:
+                checks += 1
+                if mode in (CompatibilityMode.BACKWARD, CompatibilityMode.FULL) and not cand_field.has_default:
+                    violations.append(
+                        Violation(
+                            code=AVRO_FIELD_ADDED_NO_DEFAULT,
+                            severity=Severity.BREAKING,
+                            path=f"{cand.name}.{c_name}",
+                            message=f"New field '{c_name}' added to record '{cand.name}' without a default value.",
+                            suggestion=f"Specify a 'default' attribute for '{c_name}'.",
                         )
                     )
 

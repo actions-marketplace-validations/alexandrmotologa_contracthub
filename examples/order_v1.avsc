@@ -1,0 +1,12 @@
+{
+  "type": "record",
+  "name": "OrderEvent",
+  "namespace": "commerce.orders",
+  "doc": "Base Avro schema for order events",
+  "fields": [
+    { "name": "order_id", "type": "string" },
+    { "name": "customer_id", "type": "string" },
+    { "name": "total_amount", "type": "double" },
+    { "name": "created_at_ms", "type": "long" }
+  ]
+}

@@ -9,14 +9,19 @@
       <stop offset="100%" stop-color="#0284c7"/>
     </linearGradient>
 
-    <linearGradient id="amber-linter" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#fbbf24"/>
-      <stop offset="100%" stop-color="#ea580c"/>
-    </linearGradient>
-
     <linearGradient id="slate-body" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" stop-color="#1e293b"/>
       <stop offset="100%" stop-color="#0b0f19"/>
+    </linearGradient>
+
+    <linearGradient id="chest-gradient-left" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+
+    <linearGradient id="chest-gradient-right" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#334155"/>
+      <stop offset="100%" stop-color="#1e293b"/>
     </linearGradient>
 
     <filter id="subtle-shadow" x="-10%" y="-10%" width="120%" height="120%">
@@ -50,8 +55,7 @@
         -307,-177
       " fill="none" stroke="#00f5ff" stroke-width="4" opacity="0.4" stroke-dasharray="16, 12" />
 
-      <!-- 2. The Muscular Guardian Sentinel Hound -->
-      <!-- Outer Body / Neck / Shoulder Base -->
+      <!-- 2. The Muscular Guardian Sentinel Hound Base -->
       <path d="
         M 0,-180
         L 60,-175
@@ -61,11 +65,11 @@
         L 275,80
         L 295,200
         L 210,225
-        L 220,300
-        L 120,320
-        L 0,360
-        L -120,320
-        L -220,300
+        L 220,290
+        L 110,310
+        L 0,335
+        L -110,310
+        L -220,290
         L -210,225
         L -295,200
         L -275,80
@@ -77,9 +81,7 @@
       " fill="url(#slate-body)" stroke="#0f172a" stroke-width="8" stroke-linejoin="round" />
 
       <!-- Inner Ears (Cyan Origami Facets) -->
-      <!-- Left Ear Inner -->
       <polygon points="-110,-320 -125,-165 -75,-175" fill="url(#cyan-glow)" />
-      <!-- Right Ear Inner -->
       <polygon points="110,-320 125,-165 75,-175" fill="url(#cyan-glow)" />
 
       <!-- Outer Ear Shadow / Depth -->
@@ -121,56 +123,31 @@
       <polygon points="0,90 -25,85 0,120 25,85" fill="#0f172a" />
 
       <!-- Eyes (Vigilant Linter Cyan Eyes) -->
-      <!-- Left Eye -->
       <polygon points="-75,-40 -40,-30 -50,-15 -85,-25" fill="url(#cyan-glow)" stroke="#00f5ff" stroke-width="2" />
       <circle cx="-58" cy="-28" r="4" fill="#ffffff" />
 
-      <!-- Right Eye -->
       <polygon points="75,-40 40,-30 50,-15 85,-25" fill="url(#cyan-glow)" stroke="#00f5ff" stroke-width="2" />
       <circle cx="58" cy="-28" r="4" fill="#ffffff" />
 
-      <!-- 3. Heraldic Schema Chest Shield: The Registry Core -->
-      <!-- White Clean Badge in the Muscular Chest -->
-      <polygon points="
-        0,135
-        85,185
-        85,285
-        0,335
-        -85,285
-        -85,185
-      " fill="#ffffff" stroke="#0f172a" stroke-width="10" stroke-linejoin="round" />
+      <!-- 3. Muscular Chest Armor (Clean Origami Facets - No Code, No Brackets) -->
+      <!-- Left Pectoral Plate -->
+      <polygon points="0,120 -50,150 -150,180 -175,240 -70,230 0,150" fill="url(#chest-gradient-left)" stroke="#0f172a" stroke-width="4" stroke-linejoin="round" />
 
-      <!-- Inside Chest: Schema Brackets { } and Contract Validation Check -->
-      <!-- Left Bracket { -->
-      <path d="
-        M -35,190
-        C -50,190 -55,205 -55,225
-        C -55,235 -62,238 -70,240
-        C -62,242 -55,245 -55,255
-        C -55,275 -50,290 -35,290
-      " fill="none" stroke="#0284c7" stroke-width="8" stroke-linecap="round" />
+      <!-- Right Pectoral Plate -->
+      <polygon points="0,120 50,150 150,180 175,240 70,230 0,150" fill="url(#chest-gradient-right)" stroke="#0f172a" stroke-width="4" stroke-linejoin="round" />
 
-      <!-- Right Bracket } -->
-      <path d="
-        M 35,190
-        C 50,190 55,205 55,225
-        C 55,235 62,238 70,240
-        C 62,242 55,245 55,255
-        C 55,275 50,290 35,290
-      " fill="none" stroke="#0284c7" stroke-width="8" stroke-linecap="round" />
+      <!-- Central Heraldic Sternum Diamond -->
+      <polygon points="0,150 -70,230 0,335 70,230" fill="#1e293b" stroke="#0f172a" stroke-width="4" stroke-linejoin="round" />
+      <polygon points="0,150 0,335 70,230" fill="#334155" stroke="#0f172a" stroke-width="2" stroke-linejoin="round" />
 
-      <!-- Center Contract Verified Shield / Checkmark / Node -->
-      <polygon points="0,205 28,220 28,255 0,270 -28,255 -28,220" fill="url(#cyan-glow)" />
-      <polyline points="-12,237 -3,247 14,228" fill="none" stroke="#0f172a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+      <!-- Lower Torso Flanks Left -->
+      <polygon points="-70,230 -175,240 -210,225 -220,290 -110,310 0,335" fill="#0b0f19" stroke="#0f172a" stroke-width="4" stroke-linejoin="round" />
+      
+      <!-- Lower Torso Flanks Right -->
+      <polygon points="70,230 175,240 210,225 220,290 110,310 0,335" fill="#1e293b" stroke="#0f172a" stroke-width="4" stroke-linejoin="round" />
 
-      <!-- 4. Linter Alert / Backward Compatibility Pulse (Base Node) -->
-      <g transform="translate(0, 360)">
-        <!-- Compatibility Link v1 -> v2 -->
-        <circle cx="-50" cy="-15" r="10" fill="#00f5ff" stroke="#0f172a" stroke-width="4" />
-        <line x1="-38" y1="-15" x2="38" y2="-15" stroke="#00f5ff" stroke-width="6" stroke-dasharray="6,4" />
-        <polygon points="45,-15 32,-22 32,-8" fill="#00f5ff" />
-        <circle cx="-50" cy="-15" r="4" fill="#ffffff" />
-      </g>
+      <!-- Inner Sleek Cyan Accent Keel (Pure Minimalist Tech Core) -->
+      <polygon points="0,200 -18,235 0,270 18,235" fill="url(#cyan-glow)" />
 
     </g>
   </g>

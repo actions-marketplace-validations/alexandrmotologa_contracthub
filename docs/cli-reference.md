@@ -234,4 +234,23 @@ contracthub codegen --file proto/order.proto --target typescript
 contracthub codegen --file avro/customer.avsc --target pydantic --output models.py
 ```
 
+---
+
+### `contracthub init-hooks`
+
+Installs native Git pre-commit hooks and generates `.pre-commit-config.yaml` to prevent committing breaking schema mutations locally.
+
+```bash
+contracthub init-hooks [OPTIONS]
+```
+
+#### Options:
+- `--repo, -r`: Path to git repository root. Defaults to current directory (`.`).
+
+#### Example:
+```bash
+contracthub init-hooks
+```
+
+
 

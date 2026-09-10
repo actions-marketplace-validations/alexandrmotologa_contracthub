@@ -12,6 +12,7 @@ from contracthub import __version__
 from contracthub.config import settings
 from contracthub.core.codegen import CodeGenerator
 from contracthub.core.comparator import SchemaComparator
+from contracthub.core.hooks import init_git_hooks
 from contracthub.core.mock_generator import MockGenerator
 from contracthub.core.models import CompatibilityMode
 from contracthub.core.remediation import AutoRemediator
@@ -165,7 +166,10 @@ def scan(
 
 @app.command()
 def fix(
-    candidate_file: Path = typer.Argument(..., help="Path to candidate schema file to fix."),
+    candidate: Path | None = typer.Argument(None, help="Path to candidate schema file to fix."),
+    candidate_opt: Path | None = typer.Option(
+        None, "--candidate", "-c", help="Path to candidate schema file to fix."
+    ),
     base_file: Path = typer.Option(..., "--base", "-b", help="Path to base (old) schema file."),
     in_place: bool = typer.Option(
         False,
@@ -179,7 +183,15 @@ def fix(
         help="Preview synthesized fixes without writing changes.",
     ),
 ):
-    """Automatically patch breaking changes (e.g. inject reserved tags) into candidate schemas."""
+    """Automatically patch breaking changes into candidate schemas."""
+    target_cand = candidate or candidate_opt
+    if not target_cand:
+        console.print(
+            "[bold red]Error:[/bold red] Missing candidate schema file (provide as argument or via --candidate)."
+        )
+        raise typer.Exit(code=2)
+    candidate_file = target_cand
+
     if not base_file.exists():
         console.print(f"[bold red]Error:[/bold red] Base file '{base_file}' does not exist.")
         raise typer.Exit(code=2)
@@ -191,10 +203,12 @@ def fix(
 
     base_content = base_file.read_text(encoding="utf-8")
     candidate_content = candidate_file.read_text(encoding="utf-8")
+    schema_type = SchemaComparator.detect_schema_type(candidate_content, candidate_file.name)
 
-    result = AutoRemediator.fix_proto(
+    result = AutoRemediator.fix(
         base_content=base_content,
         candidate_content=candidate_content,
+        schema_type=schema_type,
     )
 
     if not result.was_modified:
@@ -540,6 +554,31 @@ def serve(
         reload=reload,
         log_level="info",
     )
+
+
+@app.command(name="init-hooks")
+def init_hooks(
+    repo: Path = typer.Option(
+        Path("."),
+        "--repo",
+        "-r",
+        help="Git repository directory root.",
+    ),
+    force: bool = typer.Option(
+        False,
+        "--force",
+        "-f",
+        help="Overwrite existing Git hook and configuration files.",
+    ),
+):
+    """Install Git pre-commit hooks to automatically prevent breaking contract changes."""
+    success, msgs = init_git_hooks(repo_path=repo, force=force)
+    if not success:
+        console.print(f"[bold red]Error:[/bold red] {msgs[0]}")
+        raise typer.Exit(code=1)
+
+    for msg in msgs:
+        console.print(f"[bold green]✔[/bold green] {msg}")
 
 
 if __name__ == "__main__":

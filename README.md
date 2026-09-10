@@ -33,9 +33,10 @@ ContractHub also exposes a wire-compatible API for Confluent Schema Registry cli
 - Semantic Versioning (SemVer) recommendation engine (`MAJOR`, `MINOR`, `PATCH`) based on schema diffs.
 - Live Payload Validator checking JSON payloads against Proto, Avro, OpenAPI, JSON Schema, and GraphQL.
 - Multi-protocol client model code generator (`contracthub codegen`) for TypeScript and Python Pydantic v2.
-- CLI suite (`contracthub diff`, `contracthub check`, `contracthub scan`, `contracthub fix`, `contracthub mock`, `contracthub semver`, `contracthub validate`, `contracthub codegen`).
+- CLI suite (`contracthub diff`, `contracthub check`, `contracthub scan`, `contracthub fix`, `contracthub mock`, `contracthub semver`, `contracthub validate`, `contracthub codegen`, `contracthub init-hooks`).
 - Monorepo scanner with automatic git diff detection and GitHub Actions Markdown summaries.
-- Auto-remediation engine to automatically preserve deleted Protobuf tags and names with `reserved`.
+- Multi-protocol Auto-Remediation engine repairing breaking changes (Proto3 `reserved`, Avro fallback defaults, OpenAPI `deprecated` endpoints, and GraphQL `@deprecated`).
+- Native Git Pre-commit Hook integration (`contracthub init-hooks`) to prevent accidental breaking commits.
 - Synthetic mock data generator producing realistic JSON payloads from schemas.
 - Outbound Webhooks with HMAC-SHA256 signatures for schema registration and compatibility alerts.
 - Confluent Schema Registry wire-compatible HTTP endpoints (`/subjects`, `/schemas/ids/{id}`, `/compatibility/subjects/{subject}/versions/{version}`).
@@ -181,12 +182,12 @@ contracthub scan --base-ref origin/main --github-summary $GITHUB_STEP_SUMMARY
   <img src="docs/images/cli_scan.png" alt="ContractHub Monorepo Scanner" width="95%">
 </p>
 
-### 6. Auto-remediate breaking Protobuf changes
+### 6. Auto-remediate breaking schema changes
 
-Automatically preserve removed tags and names by appending `reserved` directives:
+Automatically repair breaking changes across Proto3, Avro, OpenAPI, and GraphQL:
 
 ```bash
-# Preview modifications
+# Preview modifications (Proto3 adds reserved, Avro adds default null, OpenAPI marks deprecated, GraphQL marks @deprecated)
 contracthub fix --base examples/order_v1.proto --candidate examples/order_v2_breaking.proto
 
 # Apply in-place to candidate file
@@ -203,7 +204,7 @@ contracthub mock --file examples/order_v1.proto --message Order --output mock_or
 
 ### 8. Automated SemVer Bump Recommendation
 
-Analyze schema evolution to determine whether a changesets requires a `MAJOR`, `MINOR`, or `PATCH` version bump:
+Analyze schema evolution to determine whether a changeset requires a `MAJOR`, `MINOR`, or `PATCH` version bump:
 
 ```bash
 contracthub semver examples/order_v1.proto examples/order_v2_breaking.proto --current-version 1.4.0
@@ -228,6 +229,16 @@ contracthub codegen --file examples/order_v1.proto --target typescript
 # Python Pydantic v2 models
 contracthub codegen --file examples/order_v1.avsc --target pydantic --output models.py
 ```
+
+### 11. Git Pre-Commit Hook Setup
+
+Install native pre-commit hooks into your local repository to block breaking contract commits automatically:
+
+```bash
+contracthub init-hooks
+```
+
+This installs an executable `.git/hooks/pre-commit` script and generates `.pre-commit-config.yaml` for pre-commit framework support.
 
 ## GitHub Action Usage
 
